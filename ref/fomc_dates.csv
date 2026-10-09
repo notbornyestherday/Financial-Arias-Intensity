@@ -1,0 +1,5 @@
+# FOMC announcement days, 2009-2025. Fill from federalreserve.gov (FOMC historical
+# materials by year, and the current calendar page). One row per day a statement was
+# released during regular hours. type: scheduled | unscheduled. time_et e.g. 14:15, 14:00.
+# Statement time moved from 14:15 to 14:00 at some point in 2013: check, don't assume.
+date,time_et,type,notes

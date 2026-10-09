@@ -1,0 +1,58 @@
+\documentclass[11pt]{article}
+\usepackage[margin=1in]{geometry}
+\usepackage{amsmath,amssymb,graphicx,booktabs}
+\usepackage[authoryear,round]{natbib}
+\usepackage{hyperref}
+
+\title{How Volatility Is Delivered: Arias Intensity and Husid Timing\\as Measures of Intraday Market Stress}
+\author{Your Name}
+\date{\today}
+
+\begin{document}
+\maketitle
+
+\begin{abstract}
+% Write last. One sentence each: question, method, data, main result, what didn't work.
+\end{abstract}
+
+\section{Introduction}
+% Question; why timing could matter beyond RV; contributions in order: Husid timing
+% diagnostics (headline), bounded liquidity weighting, full-sample event detection.
+
+\section{Related work}
+\subsection{Ground-motion intensity and duration}   % Arias 1970; Husid 1969; Trifunac & Brady 1975; Bommer et al. 2009; Afshari & Stewart 2016; Rousseeuw & Leroy 1988 (shortest half)
+\subsection{Realized variance and intraday periodicity} % Andersen & Bollerslev 1997; Boudt et al. 2011; Corsi 2009
+\subsection{Liquidity measures}                     % Amihud 2002; Corwin & Schultz 2012; Roll 1984
+\subsection{Flash events and reversal}              % CFTC-SEC 2010; Kirilenko et al. 2017; Campbell et al. 1993
+
+\section{Data}
+% Vendor, cleaning, data-quality report, flagged days.
+
+\section{Method}
+\subsection{Returns and deseasonalization}
+\subsection{Energy, the Husid curve, and concentration measures}
+% Arias intensity on returns = RV, so the level is the benchmark, not the contribution.
+% D5-95, D5-75 and W50 as Husid-curve durations; why the start point floats on a trading day
+% (constant background energy). Figure: one Husid curve with all three marked.
+\subsection{Bounded damping and liquidity weighting}
+% Caveat: in seismology damping belongs to the structure, not the ground motion.
+\subsection{Event detection}
+
+\section{Pre-registered hypotheses}
+% Point to the HYPOTHESES.md commit hash and date.
+
+\section{Results}
+\subsection{Simulation: recovering known bursts}
+\subsection{H1: concentration and reversal}
+\subsection{H2: next-day VIX}
+\subsection{H3: differenced signal}
+
+\section{Robustness}
+
+\section{Limitations}
+
+\section{Conclusion}
+
+\bibliographystyle{plainnat}
+\bibliography{refs}
+\end{document}
