@@ -45,12 +45,19 @@ def attach_sessions(bars: pd.DataFrame, sessions: pd.DataFrame) -> tuple[pd.Data
     return b.reset_index(drop=True), stats
 
 
+def count_duplicates(rth: pd.DataFrame) -> pd.Series:
+    """Bars per day that share a (date, tau) with a later bar; compute_returns keeps the last."""
+    return rth.duplicated(["date", "tau"], keep="last").groupby(rth["date"]).sum()
+
+
 def compute_returns(rth: pd.DataFrame) -> pd.DataFrame:
-    """Add r (log return ending at this bar), gap (minutes spanned), dup count."""
+    """Add r (log return ending at this bar) and gap (minutes spanned); drop duplicate bars.
+
+    Nothing is stored in DataFrame.attrs: parquet writes attrs as JSON and fails on
+    anything that is not plain JSON (a Series, for instance).
+    """
     df = rth.sort_values(["date", "tau"], kind="stable")
-    dup = df.duplicated(["date", "tau"], keep="last")
-    n_dup = dup.groupby(df["date"]).sum()
-    df = df.loc[~dup].copy()
+    df = df.loc[~df.duplicated(["date", "tau"], keep="last")].copy()
 
     g = df.groupby("date", sort=False)
     prev_close = g["close"].shift(1)
@@ -68,17 +75,23 @@ def compute_returns(rth: pd.DataFrame) -> pd.DataFrame:
         | (df["low"] > df[["open", "close"]].min(axis=1))
         | (df["volume"] < 0)
     )
-    df.attrs["n_dupes"] = n_dup
     return df.reset_index(drop=True)
 
 
 def flag_spikes(df: pd.DataFrame, z: float = config.SPIKE_Z,
                 revert_frac: float = config.SPIKE_REVERT_FRAC) -> pd.Series:
-    """Flag bars whose return is huge and is undone by the next minute.
+    """Flag suspected bad prints: an isolated close that the next minute undoes.
 
-    Scale is a per-day robust SD (1.4826 * MAD of single-minute returns). This is a
-    first pass before seasonality exists, so opening minutes are judged against the
-    whole day; the reversal requirement keeps false positives down.
+    All three must hold:
+    * the return into the bar is more than ``z`` robust SDs (1.4826 * MAD of the day's
+      single-minute returns);
+    * the next minute reverses at least (1 - revert_frac) of it;
+    * the bar's close lies outside the combined high-low range of the bars on either
+      side. Returns are close-to-close, so only a bad close can distort them.
+
+    The third condition is what separates a bad print from a genuine liquidity
+    whipsaw: on 2010-05-06 the crash minutes are huge and reverse, but each close sits
+    inside its neighbours' ranges, because the market really traded there (D-014).
     """
     one = df["r"].where(df["gap"] == 1)
     med = one.groupby(df["date"]).transform("median")
@@ -88,11 +101,15 @@ def flag_spikes(df: pd.DataFrame, z: float = config.SPIKE_Z,
     g = df.groupby("date", sort=False)
     z_next = zt.groupby(df["date"]).shift(-1)
     gap_next = g["gap"].shift(-1)
+    nb_high = pd.concat([g["high"].shift(1), g["high"].shift(-1)], axis=1).max(axis=1)
+    nb_low = pd.concat([g["low"].shift(1), g["low"].shift(-1)], axis=1).min(axis=1)
+    isolated = (df["close"] > nb_high) | (df["close"] < nb_low)
     return (
         (zt.abs() > z)
         & (gap_next == 1)
         & (np.sign(z_next) == -np.sign(zt))
         & ((zt + z_next).abs() < revert_frac * zt.abs())
+        & isolated
     ).fillna(False)
 
 
@@ -100,8 +117,8 @@ def clean(bars: pd.DataFrame, sessions: pd.DataFrame, drop_spikes: bool = False
           ) -> tuple[pd.DataFrame, pd.DataFrame, dict]:
     """Full cleaning pass. Returns (minutes, dq_by_day, summary_stats)."""
     rth, stats = attach_sessions(bars, sessions)
+    n_dupes = count_duplicates(rth)
     df = compute_returns(rth)
-    n_dupes = df.attrs.get("n_dupes", pd.Series(dtype=int))
     df["spike"] = flag_spikes(df)
     if drop_spikes and df["spike"].any():
         df = compute_returns(df.loc[~df["spike"], rth.columns])
@@ -135,8 +152,9 @@ def quality_by_day(df: pd.DataFrame, sessions: pd.DataFrame,
 
 
 def write_dq_report(dq: pd.DataFrame, stats: dict, flags: pd.DataFrame,
-                    symbol: str, out_dir: Path = config.REPORTS) -> Path:
+                    symbol: str, out_dir: Path | None = None) -> Path:
     """Write reports/dq_<symbol>.csv and a short markdown summary."""
+    out_dir = Path(out_dir) if out_dir is not None else config.REPORTS
     out_dir.mkdir(parents=True, exist_ok=True)
     full = dq.join(flags)
     full.to_csv(out_dir / f"dq_{symbol}.csv")

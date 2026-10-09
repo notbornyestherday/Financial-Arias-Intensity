@@ -71,3 +71,18 @@ def test_dq_report_writes(tmp_path):
     text = path.read_text()
     assert "Spike-and-revert bars flagged: 1" in text
     assert (tmp_path / "dq_SIM.csv").exists()
+
+
+def test_genuine_whipsaw_is_not_flagged():
+    """A crash-style V (big drop, big rebound) whose closes sit inside neighbouring
+    ranges is real trading, not a bad print (modelled on SPY, 2010-05-06 14:44-14:47)."""
+    bars, sessions = _one_day()
+    p = bars.loc[198, "close"]
+    v = {199: (1.000, 1.010, 0.960, 0.970),   # open, high, low, close as multiples of p
+         200: (0.970, 1.000, 0.940, 0.995),   # +2.5% into a wide-range minute
+         201: (0.995, 1.000, 0.950, 0.972)}   # -2.3%: the next minute undoes most of it
+    for t, mult in v.items():
+        bars.loc[t, ["open", "high", "low", "close"]] = [p * m for m in mult]
+    minutes, dq, _ = clean(bars, sessions)
+    assert not minutes.loc[minutes["tau"].between(199, 202), "spike"].any()
+    assert dq.iloc[0]["n_spikes"] == 0
