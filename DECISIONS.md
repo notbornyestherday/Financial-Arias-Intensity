@@ -16,7 +16,7 @@ what, why, and what it affects.
 | D-009 | 2026-10-09 | Primary concentration measure is W50: the shortest time the Husid curve takes to climb 50 points. D5-75 (seismology standard) is secondary and every W50 test is repeated with it; D5-95 is reported for comparison. | All three are Husid-curve durations. A trading day has a constant background energy rate, so a start fixed at H = 5% falls in background; W50 lets the start float. Simulation (`scripts/sim_duration_power.py`, 1000 reps), separation d between a burst and a same-RV grind, D5-95 / D5-75 / W50: x12 4.1 / 6.4 / 24.9; x6 3.0 / 6.4 / 9.9; x4 2.0 / 3.3 / 3.7; x6 with t(4) noise 1.7 / 3.0 / 4.5. |
 | D-010 | 2026-10-06 | Request raw (unadjusted) prices from the vendor. | Dollar volume in Amihud should be real. Intraday log returns are unaffected either way. |
 | D-011 | 2026-10-09 | Preliminary H1b null check passed. | With independent increments and concentration varying across days (16,000 days, normal and t(4) noise), slopes of VR(30/5) on ln W50, ln D5-75 and ln D5-95 were all within about 2 SE of zero with mixed signs (`scripts/sim_h1b_null.py`). The VR test is not mechanically tied to concentration in this setting. |
-
+| D-012 | 2026-10-09 | HYPOTHESES file renamed to HYPOTHESES.md; H3 formula restored. | Both were altered by a Notion export (ID suffix on the file name; underscores turned into asterisks). No change in substance. Pre-registration commit: 0c666cb, 2026-10-09 11:57 ET. |
 ## Open questions
 
 - Vendor (Alpha Vantage vs. FirstRate) and bar timestamp convention. Confirm the convention from the vendor docs and from `run_all.py --stages ingest` diagnostics.
