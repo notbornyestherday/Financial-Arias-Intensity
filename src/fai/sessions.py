@@ -56,17 +56,32 @@ def synthetic_sessions(dates, n_minutes: int = config.FULL_DAY_MINUTES) -> pd.Da
     return _finish(out)
 
 
-def load_fomc_dates() -> pd.DataFrame:
-    """FOMC announcement days from ref/fomc_dates.csv (columns: date,time_et,type,notes)."""
-    path = config.REF / "fomc_dates.csv"
+def _load_ref(name: str) -> pd.DataFrame:
+    path = config.REF / name
     if not path.exists():
-        warnings.warn(f"{path} missing; FOMC flags will be empty", stacklevel=2)
-        return pd.DataFrame(columns=["time_et", "type", "notes"])
-    df = pd.read_csv(path, comment="#")
+        warnings.warn(f"{path} missing; its flags will be empty", stacklevel=3)
+        return pd.DataFrame(columns=["date"]).set_index("date")
+    df = pd.read_csv(path, comment="#", dtype={"time_et": str})
     if df.empty:
-        warnings.warn("ref/fomc_dates.csv has no rows yet; FOMC flags are empty", stacklevel=2)
+        warnings.warn(f"ref/{name} has no rows; its flags are empty", stacklevel=3)
     df["date"] = pd.to_datetime(df["date"])
     return df.set_index("date")
+
+
+def load_fomc_dates(rth_only: bool = True) -> pd.DataFrame:
+    """FOMC statements from ref/fomc_dates.csv (columns: date,time_et,type,in_rth,notes).
+
+    By default only releases inside regular hours, which is what defines an FOMC day.
+    """
+    df = _load_ref("fomc_dates.csv")
+    if rth_only and "in_rth" in df.columns:
+        df = df[df["in_rth"].astype(bool)]
+    return df
+
+
+def load_macro_dates() -> pd.DataFrame:
+    """ISM release days from ref/macro_dates.csv (columns: date,time_et,release,certain,notes)."""
+    return _load_ref("macro_dates.csv")
 
 
 def day_flags(dates) -> pd.DataFrame:
@@ -76,12 +91,14 @@ def day_flags(dates) -> pd.DataFrame:
     halts = set(pd.to_datetime(config.MARKET_HALT_DAYS))
     prints = set(pd.to_datetime(config.PRINT_QUALITY_DAYS))
     fomc = set(load_fomc_dates().index)
+    macro = set(load_macro_dates().index)
     return pd.DataFrame(
         {
             "event": [events.get(d, "") for d in idx],
             "market_halt": [d in halts for d in idx],
             "print_quality": [d in prints for d in idx],
             "fomc": [d in fomc for d in idx],
+            "macro_release": [d in macro for d in idx],
         },
         index=idx,
     )
