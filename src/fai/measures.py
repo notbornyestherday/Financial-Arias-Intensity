@@ -1,4 +1,5 @@
-"""Daily measures: RV (benchmark), normalised energy (FAI), Husid timing, VR."""
+"""Daily measures: RV (benchmark), normalised energy (FAI), Husid timing, VR,
+and the D-018 benchmark concentration measures."""
 
 from __future__ import annotations
 
@@ -59,6 +60,41 @@ def variance_ratio(A: pd.DataFrame, base: int = config.VR_BASE_MIN,
     return pd.Series(vr, index=A.index, name="vr")
 
 
+def benchmark_measures(A: pd.DataFrame) -> pd.DataFrame:
+    """Existing high-frequency measures of uneven variation, for comparison with W50 (D-018).
+
+    Computed on the same deseasonalised returns as W50 so that only the functional differs.
+
+    * jump_share = max(RV - BV, 0) / RV, with bipower variation
+      BV = (pi/2) * sum |a_t| |a_{t-1}| (Barndorff-Nielsen and Shephard 2004). Near 1 when
+      one isolated minute dominates; near 0 when large moves come in runs or not at all.
+    * rq_ratio = n * sum a^4 / (3 * (sum a^2)^2): realized quarticity scaled so that it is
+      about 1 under constant volatility (Bollerslev, Patton and Quaedvlieg 2016). It is the
+      Herfindahl index of the minutes' energy shares times n/3, so n_eff = n / (3 * rq_ratio)
+      reads as the effective number of active minutes.
+    * down_share = sum a^2 [a < 0] / sum a^2: downside semivariance share (Patton and
+      Sheppard 2015).
+
+    rq_ratio and jump_share do not depend on the order of the minutes (jump_share only
+    through adjacent pairs); W50 does. "W50 beyond rq_ratio" is therefore the test of
+    whether timing matters beyond unevenness.
+    """
+    x = A.to_numpy(float)
+    n = np.isfinite(x).sum(axis=1)
+    z = np.nan_to_num(x, nan=0.0)
+    rv = (z ** 2).sum(axis=1)
+    bv = (np.pi / 2) * (np.abs(z[:, 1:]) * np.abs(z[:, :-1])).sum(axis=1)
+    with np.errstate(invalid="ignore", divide="ignore"):
+        jump = np.clip(rv - bv, 0.0, None) / rv
+        rq = n * (z ** 4).sum(axis=1) / (3.0 * rv ** 2)
+        down = (np.where(z < 0, z, 0.0) ** 2).sum(axis=1) / rv
+    out = pd.DataFrame({"bv": bv, "jump_share": jump, "rq_ratio": rq, "down_share": down},
+                       index=A.index)
+    out["n_eff"] = n / (3.0 * out["rq_ratio"])
+    out.loc[~(rv > 0)] = np.nan                     # no energy: nothing to measure
+    return out
+
+
 def daily_measures(R: pd.DataFrame, Rt: pd.DataFrame) -> pd.DataFrame:
     """All per-day measures from raw (R) and deseasonalised (Rt) minute matrices."""
     out = pd.DataFrame(index=R.index)
@@ -72,5 +108,6 @@ def daily_measures(R: pd.DataFrame, Rt: pd.DataFrame) -> pd.DataFrame:
         out[f"max_share{sfx}"] = (A ** 2).max(axis=1) / E
         out = out.join(husid_times(A).add_suffix(sfx))
     out["vr"] = variance_ratio(Rt)
+    out = out.join(benchmark_measures(Rt))
     out["n_obs"] = Rt.notna().sum(axis=1)
     return out
