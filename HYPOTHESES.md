@@ -98,7 +98,7 @@ d ln VIX_{d+1} > ln 1.2, with the same regressors.
 
 ## H3: differenced signal
 
-Replacing r̃_t with r̃*t − r̃*{t−1} improves neither H1b nor H2. Expected, because
+Replacing r̃_t with r̃_t − r̃_{t−1} improves neither H1b nor H2. Expected, because
 differencing amplifies bid-ask noise. Reported as a check, not a finding.
 
 ## Exploratory (not confirmatory)
