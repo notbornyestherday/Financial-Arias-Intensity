@@ -32,7 +32,7 @@ OUT_OF_SAMPLE = ("2019-01-01", "2025-12-31")
 SEAS_WINDOW_DAYS = 60
 SEAS_MIN_DAYS = 40
 SEAS_METHOD = "rms"           # "rms" (registered default) or "median"; chosen per D-019
-SEAS_SMOOTH_MIN = 0           # 0 = no smoothing; D-019's candidate is a centred 5-minute mean
+SEAS_SMOOTH_MIN = 5           # centred 5-minute mean across minutes; chosen by D-019, logged as D-020
 
 # --- Energy normalisation R_m -------------------------------------------------
 RM_WINDOW_DAYS = 90
