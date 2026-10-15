@@ -24,8 +24,15 @@ def daily_energy(A: pd.DataFrame) -> pd.Series:
 
 
 def normalizer(E: pd.Series, window: int = config.RM_WINDOW_DAYS,
-               min_days: int = config.RM_MIN_DAYS) -> pd.Series:
-    """R_m: mean daily energy over the prior ``window`` days (excludes today)."""
+               min_days: int = config.RM_MIN_DAYS, exclude=None) -> pd.Series:
+    """R_m: mean daily energy over the prior ``window`` sessions (excludes today).
+
+    Days in ``exclude`` (half-days, D-019) do not enter the average: a 3.5-hour day
+    would pull down the typical energy of 6.5-hour days.
+    """
+    E = E.copy()
+    if exclude is not None:
+        E[E.index.isin(pd.DatetimeIndex(exclude))] = np.nan
     return E.rolling(window, min_periods=min_days).mean().shift(1)
 
 
@@ -95,8 +102,11 @@ def benchmark_measures(A: pd.DataFrame) -> pd.DataFrame:
     return out
 
 
-def daily_measures(R: pd.DataFrame, Rt: pd.DataFrame) -> pd.DataFrame:
-    """All per-day measures from raw (R) and deseasonalised (Rt) minute matrices."""
+def daily_measures(R: pd.DataFrame, Rt: pd.DataFrame, rm_exclude=None) -> pd.DataFrame:
+    """All per-day measures from raw (R) and deseasonalised (Rt) minute matrices.
+
+    ``rm_exclude``: days left out of the FAI normalizer R_m (half-days, D-019).
+    """
     out = pd.DataFrame(index=R.index)
     out["rv"] = (R ** 2).sum(axis=1, min_count=1)          # benchmark, raw returns
     out["ret_oc"] = R.sum(axis=1, min_count=1)              # open-to-close log return
@@ -104,7 +114,7 @@ def daily_measures(R: pd.DataFrame, Rt: pd.DataFrame) -> pd.DataFrame:
         A = signal(Rt, kind)
         E = daily_energy(A)
         out[f"energy{sfx}"] = E
-        out[f"fai{sfx}"] = E / normalizer(E)
+        out[f"fai{sfx}"] = E / normalizer(E, exclude=rm_exclude)
         out[f"max_share{sfx}"] = (A ** 2).max(axis=1) / E
         out = out.join(husid_times(A).add_suffix(sfx))
     out["vr"] = variance_ratio(Rt)

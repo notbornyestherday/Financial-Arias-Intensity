@@ -30,7 +30,7 @@ Outputs: `reports/dq_SPY.md` (data-quality report) and `data/processed/SPY_daily
 ## Layout
 
 ```
-scripts/      download.py, run_all.py, sim_duration_power.py, sim_h1b_null.py
+scripts/      download.py, run_all.py, choose_seasonality.py, sim_duration_power.py, sim_h1b_null.py
 src/fai/      ingest, sessions, clean, seasonality, husid, measures, sim (done)
               liquidity (Week 3), detection (Week 4), vix (Week 5): stubs
 tests/        unit tests; CI runs them on every push

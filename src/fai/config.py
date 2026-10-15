@@ -31,7 +31,8 @@ OUT_OF_SAMPLE = ("2019-01-01", "2025-12-31")
 # --- Seasonality (Section 3) --------------------------------------------------
 SEAS_WINDOW_DAYS = 60
 SEAS_MIN_DAYS = 40
-SEAS_METHOD = "rms"           # "rms" (brief) or "median" (robustness)
+SEAS_METHOD = "rms"           # "rms" (registered default) or "median"; chosen per D-019
+SEAS_SMOOTH_MIN = 0           # 0 = no smoothing; D-019's candidate is a centred 5-minute mean
 
 # --- Energy normalisation R_m -------------------------------------------------
 RM_WINDOW_DAYS = 90

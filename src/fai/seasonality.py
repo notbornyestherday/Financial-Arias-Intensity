@@ -20,17 +20,34 @@ def to_matrix(minutes: pd.DataFrame, col: str,
     return m.reindex(columns=range(n_minutes)).sort_index()
 
 
+def smooth_profile(S2: pd.DataFrame, width: int) -> pd.DataFrame:
+    """Centred moving average of s^2(tau) across neighbouring minutes (D-019).
+
+    Each per-minute estimate rests on about 60 observations, so it is noisy; averaging
+    over ``width`` neighbouring minutes trades a little bias for less noise. The first
+    and last minutes (opening and closing auctions) are genuinely different: they are
+    never smoothed and never used as anyone's neighbour. Windows shrink at the edges.
+    """
+    if width <= 1:
+        return S2
+    out = S2.copy()
+    inner = S2.iloc[:, 1:-1]
+    out.iloc[:, 1:-1] = inner.T.rolling(width, center=True, min_periods=1).mean().T.to_numpy()
+    return out
+
+
 def seasonal_variance(R: pd.DataFrame, G: pd.DataFrame, exclude=None,
                       window: int = config.SEAS_WINDOW_DAYS,
                       min_days: int = config.SEAS_MIN_DAYS,
-                      method: str = config.SEAS_METHOD) -> pd.DataFrame:
+                      method: str = config.SEAS_METHOD,
+                      smooth: int = config.SEAS_SMOOTH_MIN) -> pd.DataFrame:
     """Trailing per-minute variance s^2(tau) from prior days only.
 
     Only single-minute returns (gap == 1) enter the estimate. Rows whose index is
     in ``exclude`` (e.g. half-days) are skipped. ``method="median"`` is a robust
     alternative: one crash day otherwise inflates s(tau) at that minute for 60 days.
-    Open question (DECISIONS.md): smoothing across neighbouring minutes, since each
-    estimate rests on ~60 observations.
+    ``smooth`` > 1 averages the profile across that many neighbouring minutes
+    (``smooth_profile``). Which combination is used is decided by D-019.
     """
     X = R.where(G == 1) ** 2
     if exclude is not None:
@@ -42,7 +59,7 @@ def seasonal_variance(R: pd.DataFrame, G: pd.DataFrame, exclude=None,
         S2 = roll.median() / CHI2_1_MEDIAN
     else:
         raise ValueError(f"unknown method {method!r}")
-    return S2.shift(1)
+    return smooth_profile(S2, smooth).shift(1)
 
 
 def deseasonalize(R: pd.DataFrame, G: pd.DataFrame, S2: pd.DataFrame) -> pd.DataFrame:

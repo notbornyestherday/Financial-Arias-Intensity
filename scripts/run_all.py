@@ -71,9 +71,11 @@ def stage_measures(args) -> None:
     minutes = pd.read_parquet(config.PROCESSED / f"{args.symbol}_minutes{tag}.parquet")
     sessions = pd.read_parquet(config.PROCESSED / "sessions.parquet")
     R, G = to_matrix(minutes, "r"), to_matrix(minutes, "gap")
-    S2 = seasonal_variance(R, G, exclude=sessions.index[sessions["half_day"]])
+    half_days = sessions.index[sessions["half_day"]]
+    S2 = seasonal_variance(R, G, exclude=half_days)
     Rt = deseasonalize(R, G, S2)
-    daily = daily_measures(R, Rt).join(sessions[["half_day"]]).join(day_flags(R.index))
+    daily = (daily_measures(R, Rt, rm_exclude=half_days)
+             .join(sessions[["half_day"]]).join(day_flags(R.index)))
     daily.to_parquet(config.PROCESSED / f"{args.symbol}_daily{tag}.parquet")
     daily.to_csv(config.PROCESSED / f"{args.symbol}_daily{tag}.csv")   # computed measures only
     print(f"measures: {len(daily):,} days")
