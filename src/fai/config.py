@@ -67,6 +67,14 @@ EVT_END_RUN_MIN = 15
 SPIKE_Z = 8.0
 SPIKE_REVERT_FRAC = 0.3
 
+# --- Data-quality exclusion (DECISIONS.md D-016, D-021) -----------------------
+# A day missing more than OUTAGE_MAX_MISSING regular-hours minutes that a
+# market-wide halt does not explain is a vendor outage: it is dropped from all
+# tests and left out of R_m. A Level 1 halt explains at most HALT_MINUTES
+# missing minutes (one 15-minute pause).
+OUTAGE_MAX_MISSING = 30
+HALT_MINUTES = 15
+
 # --- Named days (Section 5). Illustrations only; evidence is full-sample. -----
 EVENTS = {
     "2010-05-06": "Flash Crash",

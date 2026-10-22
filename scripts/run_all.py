@@ -21,7 +21,7 @@ sys.path.insert(0, str(ROOT / "src"))
 import pandas as pd  # noqa: E402
 
 from fai import config  # noqa: E402
-from fai.clean import clean, write_dq_report  # noqa: E402
+from fai.clean import clean, quality_by_day, write_dq_report  # noqa: E402
 from fai.ingest import (bar_label_diagnostics, load_alphavantage_dir,  # noqa: E402
                         load_firstrate, to_bar_start)
 from fai.measures import daily_measures  # noqa: E402
@@ -72,13 +72,20 @@ def stage_measures(args) -> None:
     sessions = pd.read_parquet(config.PROCESSED / "sessions.parquet")
     R, G = to_matrix(minutes, "r"), to_matrix(minutes, "gap")
     half_days = sessions.index[sessions["half_day"]]
+    dq = quality_by_day(minutes, sessions)
+    outage_days = dq.index[dq["outage"]]                    # D-016
     S2 = seasonal_variance(R, G, exclude=half_days)
     Rt = deseasonalize(R, G, S2)
-    daily = (daily_measures(R, Rt, rm_exclude=half_days)
-             .join(sessions[["half_day"]]).join(day_flags(R.index)))
+    daily = (daily_measures(R, Rt, rm_exclude=half_days.union(outage_days))   # D-021
+             .join(sessions[["half_day"]])
+             .join(dq[["n_missing_unexplained", "outage"]])
+             .join(day_flags(R.index)))
+    # The day-level sample flag every H1/H2 test reads: half-days and outage days out.
+    daily["in_tests"] = ~daily["half_day"] & ~daily["outage"]
     daily.to_parquet(config.PROCESSED / f"{args.symbol}_daily{tag}.parquet")
     daily.to_csv(config.PROCESSED / f"{args.symbol}_daily{tag}.csv")   # computed measures only
-    print(f"measures: {len(daily):,} days")
+    print(f"measures: {len(daily):,} days; outage days (D-016): "
+          f"{', '.join(str(d.date()) for d in outage_days) or 'none'}")
 
 
 def main() -> None:

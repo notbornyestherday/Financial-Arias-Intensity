@@ -66,6 +66,10 @@ def test_run_all_end_to_end(tmp_path, monkeypatch):
     sessions = nyse_sessions("2015-09-01", "2016-02-29")
     burst_day = sessions.index[100]
     bars = _simulated_bars(sessions, np.random.default_rng(1), burst_day=burst_day)
+    outage_day = sessions.index[110]                        # D-016: opening 40 minutes lost
+    day_of = bars["ts"].dt.tz_localize(None).dt.normalize()
+    lost = (day_of == outage_day) & (bars["tau"] < 40)
+    bars = bars.loc[~lost].reset_index(drop=True)
     _write_alphavantage(bars, config.RAW / "alphavantage" / "SPY")
 
     run_all = _load_run_all()
@@ -93,3 +97,13 @@ def test_run_all_end_to_end(tmp_path, monkeypatch):
     assert daily["d5_95"].iloc[40:].notna().all()
     calm_w50 = daily["w50"].iloc[45:99].median()
     assert daily.at[burst_day, "w50"] < 20 < calm_w50
+
+    # D-016 / D-021: the outage day is flagged, out of the test sample and out of R_m
+    assert daily.index[daily["outage"]].tolist() == [outage_day]
+    assert daily.at[outage_day, "n_missing_unexplained"] == 40
+    assert not daily.at[outage_day, "in_tests"] and not daily.at[half, "in_tests"]
+    assert daily["in_tests"].sum() == len(daily) - 3        # two half-days, one outage
+    assert "Outage days (D-016" in report and str(outage_day.date()) in report
+    from fai.measures import normalizer
+    rm = normalizer(daily["energy"], exclude=daily.index[daily["half_day"] | daily["outage"]])
+    assert np.allclose(daily["fai"], daily["energy"] / rm, equal_nan=True)

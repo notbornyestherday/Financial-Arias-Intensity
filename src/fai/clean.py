@@ -148,6 +148,13 @@ def quality_by_day(df: pd.DataFrame, sessions: pd.DataFrame,
     dq["max_share_raw"] = (r2.groupby(df["date"]).max()
                            / r2.groupby(df["date"]).sum()).reindex(dq.index)
     dq["no_data"] = dq["n_bars"] == 0
+    # D-016: a market-wide halt explains its own pause (the day's longest gap, at most
+    # HALT_MINUTES missing bars); anything else missing counts against the day.
+    halt_day = dq.index.isin(pd.to_datetime(config.MARKET_HALT_DAYS))
+    dq["n_missing_halt"] = ((dq["max_gap"] - 1).clip(lower=0, upper=config.HALT_MINUTES)
+                            .where(halt_day, 0).fillna(0).astype(int))
+    dq["n_missing_unexplained"] = dq["n_missing"] - dq["n_missing_halt"]
+    dq["outage"] = dq["n_missing_unexplained"] > config.OUTAGE_MAX_MISSING
     return dq
 
 
@@ -181,6 +188,10 @@ def write_dq_report(dq: pd.DataFrame, stats: dict, flags: pd.DataFrame,
         f"Spike-and-revert bars flagged: {int(have['n_spikes'].sum())} on "
         f"{int((have['n_spikes'] > 0).sum())} days. OHLC-inconsistent bars: "
         f"{int(have['n_ohlc_bad'].sum())}. Duplicate timestamps: {int(have['n_dupes'].sum())}.",
+        f"Outage days (D-016: more than {config.OUTAGE_MAX_MISSING} minutes missing beyond a "
+        f"market-wide halt; dropped from all tests): {int(full['outage'].sum())}"
+        + (": " + ", ".join(str(d.date()) for d in full.index[full["outage"]])
+           if full["outage"].any() else "."),
         "",
         "## Days where one minute holds the most energy (raw returns)",
         "W50 and D5-95 are fragile on these; check each against the event list.",
@@ -190,11 +201,13 @@ def write_dq_report(dq: pd.DataFrame, stats: dict, flags: pd.DataFrame,
         "",
         "## Largest gaps (halts, missing bars)",
         "",
-        table(have.nlargest(20, "max_gap"), ["max_gap", "n_missing", "event", "market_halt"]),
+        table(have.nlargest(20, "max_gap"),
+              ["max_gap", "n_missing", "n_missing_unexplained", "outage", "event", "market_halt"]),
         "",
         "## Flagged days",
         "",
-        table(full.loc[(full["event"] != "") | full["market_halt"] | full["print_quality"]],
+        table(full.loc[(full["event"] != "") | full["market_halt"] | full["print_quality"]
+                       | full["outage"]],
               ["n_bars", "n_missing", "max_gap", "n_spikes", "max_share_raw", "event"]),
         "",
     ]

@@ -70,6 +70,7 @@ def test_dq_report_writes(tmp_path):
     path = write_dq_report(dq, stats, day_flags(sessions.index), "SIM", tmp_path)
     text = path.read_text()
     assert "Spike-and-revert bars flagged: 1" in text
+    assert "dropped from all tests): 0." in text            # D-016: no outage days
     assert (tmp_path / "dq_SIM.csv").exists()
 
 
@@ -86,3 +87,49 @@ def test_genuine_whipsaw_is_not_flagged():
     minutes, dq, _ = clean(bars, sessions)
     assert not minutes.loc[minutes["tau"].between(199, 202), "spike"].any()
     assert dq.iloc[0]["n_spikes"] == 0
+
+
+# --- D-016: vendor-outage days ------------------------------------------------
+
+def _day_missing(taus, start="2015-01-05", seed=7):
+    """One simulated day with the bars at ``taus`` removed; returns its dq row."""
+    bars, sessions, _ = simulate_panel(np.random.default_rng(seed), 1, start=start)
+    bars = bars.loc[~bars.index.isin(list(taus))].reset_index(drop=True)
+    _, dq, _ = clean(bars, sessions)
+    return dq.iloc[0]
+
+
+def test_outage_threshold_is_strictly_more_than_30_minutes():
+    scattered = range(40, 340, 10)                          # 30 single missing minutes
+    assert _day_missing(scattered)["n_missing_unexplained"] == 30
+    assert not _day_missing(scattered)["outage"]            # exactly 30: kept
+    assert _day_missing([*scattered, 345])["outage"]        # 31: dropped
+
+
+def test_missing_opening_block_is_an_outage():
+    """Modelled on 2021-04-12: the opening minutes are gone, so the first-bar rule
+    (D-002) would start the day late and the opening move would be lost."""
+    row = _day_missing(range(0, 40))
+    assert row["first_tau"] == 40 and row["n_missing"] == 40 and row["outage"]
+
+
+def test_market_halt_explains_only_its_own_pause():
+    halt = range(4, 19)                                     # 15 bars missing, gap of 16
+    on_halt_day = _day_missing([*halt, *range(100, 400, 15)], start="2020-03-09")
+    assert on_halt_day["n_missing_halt"] == 15
+    assert on_halt_day["n_missing_unexplained"] == 20 and not on_halt_day["outage"]
+    # The same 35 missing minutes on an ordinary day are not explained by anything.
+    ordinary = _day_missing([*halt, *range(100, 400, 15)], start="2020-03-10")
+    assert ordinary["n_missing_halt"] == 0 and ordinary["outage"]
+    # A long outage on a halt day is excused only for the 15-minute pause.
+    long_gap = _day_missing(range(100, 152), start="2020-03-09")
+    assert long_gap["n_missing_halt"] == 15 and long_gap["n_missing_unexplained"] == 37
+    assert long_gap["outage"]
+
+
+def test_session_with_no_data_is_an_outage():
+    bars, sessions, _ = simulate_panel(np.random.default_rng(8), 2)
+    bars = bars.loc[bars["ts"].dt.tz_localize(None).dt.normalize() == sessions.index[0]]
+    _, dq, _ = clean(bars, sessions)
+    assert not dq["outage"].iloc[0]
+    assert dq["no_data"].iloc[1] and dq["outage"].iloc[1]
