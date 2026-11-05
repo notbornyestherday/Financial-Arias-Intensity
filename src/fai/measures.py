@@ -67,6 +67,34 @@ def variance_ratio(A: pd.DataFrame, base: int = config.VR_BASE_MIN,
     return pd.Series(vr, index=A.index, name="vr")
 
 
+def variance_ratio_skip(A: pd.DataFrame, base: int = config.VR_BASE_MIN,
+                        long: int = config.VR_LONG_MIN) -> pd.Series:
+    """VR*(long/base): the variance ratio without neighbouring-block products (D-023).
+
+    VR* = (sum_j L_j^2 - 2 sum_j sum_{i,i+1 in j} b_i b_{i+1}) / sum_i b_i^2, where b are
+    base-minute block sums and L the long-block sums they make up.
+
+    Bid-ask bounce enters a block return only at its two ends, and each block ends on the
+    print the next block starts from. Bounce therefore shows up as a negative covariance
+    between neighbouring blocks plus an inflated block variance. Dropping the neighbour
+    products from the numerator leaves E[VR*] = 1 under Roll bounce whatever the spread
+    pattern, while reversal over two or more blocks (10-30 minutes) still lowers it.
+    The cost: reversal within one block boundary (5-10 minutes) is no longer seen.
+    """
+    x = np.nan_to_num(A.to_numpy(float), nan=0.0)
+    n_days, n = x.shape
+    nb = n // base
+    b = x[:, : nb * base].reshape(n_days, nb, base).sum(axis=2)
+    m = long // base
+    nl = nb // m
+    b = b[:, : nl * m].reshape(n_days, nl, m)
+    long_sq = (b.sum(axis=2) ** 2).sum(axis=1)
+    neighbours = (b[:, :, 1:] * b[:, :, :-1]).sum(axis=(1, 2))
+    with np.errstate(invalid="ignore", divide="ignore"):
+        vr = (long_sq - 2 * neighbours) / (b ** 2).sum(axis=(1, 2))
+    return pd.Series(vr, index=A.index, name="vr_skip")
+
+
 def benchmark_measures(A: pd.DataFrame) -> pd.DataFrame:
     """Existing high-frequency measures of uneven variation, for comparison with W50 (D-018).
 
@@ -117,7 +145,8 @@ def daily_measures(R: pd.DataFrame, Rt: pd.DataFrame, rm_exclude=None) -> pd.Dat
         out[f"fai{sfx}"] = E / normalizer(E, exclude=rm_exclude)
         out[f"max_share{sfx}"] = (A ** 2).max(axis=1) / E
         out = out.join(husid_times(A).add_suffix(sfx))
-    out["vr"] = variance_ratio(Rt)
+    out["vr"] = variance_ratio(Rt)                  # registered H1b measure
+    out["vr_skip"] = variance_ratio_skip(Rt)        # primary since D-023 (bounce-robust)
     out = out.join(benchmark_measures(Rt))
     out["n_obs"] = Rt.notna().sum(axis=1)
     return out
