@@ -82,7 +82,8 @@ def decile_percentile(d: pd.DataFrame, col: str) -> pd.Series:
 def h1a(d: pd.DataFrame, w50_no_open: pd.Series | None = None) -> tuple[pd.DataFrame, dict]:
     d = d.copy()
     d["q"] = decile_percentile(d, PRIMARY_M)
-    cols = ["rv", "rv_decile", PRIMARY_M, "q"]
+    d["q_d5_75"] = decile_percentile(d, ROBUST_M)          # robustness rule
+    cols = ["rv", "rv_decile", PRIMARY_M, "q", ROBUST_M, "q_d5_75"]
     if w50_no_open is not None:
         d["w50_no_open"] = w50_no_open.reindex(d.index)
         d["q_no_open"] = decile_percentile(d, "w50_no_open")
@@ -94,9 +95,13 @@ def h1a(d: pd.DataFrame, w50_no_open: pd.Series | None = None) -> tuple[pd.DataF
     t = d.loc[days, cols]
     crash_ok = bool((t.loc[pd.DatetimeIndex(CRASH_DAYS), "q"] < 10).all())
     halt_median = float(t.loc[pd.DatetimeIndex(HALT_DAYS_2020), "q"].median())
+    crash_ok_r = bool((t.loc[pd.DatetimeIndex(CRASH_DAYS), "q_d5_75"] < 10).all())
+    halt_median_r = float(t.loc[pd.DatetimeIndex(HALT_DAYS_2020), "q_d5_75"].median())
     out = {"crash_days_q_below_10": crash_ok, "halt_days_median_q": halt_median,
            "halt_days_median_above_50": halt_median > 50,
-           "holds": crash_ok and halt_median > 50}
+           "holds": crash_ok and halt_median > 50,
+           "holds_with_d5_75": crash_ok_r and halt_median_r > 50,
+           "halt_days_median_q_d5_75": halt_median_r}
     if w50_no_open is not None:
         out["halt_days_median_q_no_open"] = float(
             t.loc[pd.DatetimeIndex(HALT_DAYS_2020), "q_no_open"].median())
@@ -166,9 +171,14 @@ def verdicts(b: pd.DataFrame, c: pd.DataFrame) -> dict:
     cc = c.loc[(c["test"] == "H1c concentration") & c["primary"]].iloc[0]
     cd = c.loc[(c["test"] == "H1c dummy") & c["primary"]].iloc[0]
     v_c1 = sign_verdict(cc["coef"], cc["t"], "-")
+    cr = c.loc[(c["test"] == "H1c concentration") & c["robustness"]].iloc[0]
+    v_c1_rob = sign_verdict(cr["coef"], cr["t"], "-")
     dummy_neg = cd["t"] <= -Z_5
     return {"H1b": v_b_full, "H1b_with_D5-75": v_rob,
-            "H1c_concentration": v_c1,
+            "H1c_concentration": v_c1 if v_c1 != "supported" else
+                ("supported, and holds with D5-75" if v_c1_rob == "supported" else
+                 "supported, but fragile (D5-75 disagrees)"),
+            "H1c_concentration_with_D5-75": v_c1_rob,
             "H1c_dummy": "significantly negative (fails)" if dummy_neg else
                          "not significantly negative (holds)",
             "H1c_holds": v_c1 == "supported" and not dummy_neg,
@@ -219,22 +229,27 @@ def section(name: str, res: dict) -> list[str]:
              "### Verdicts", "",
              f"- H1a: crash days q < 10: {a['crash_days_q_below_10']}; median q of the 2020 "
              f"halt days {a['halt_days_median_q']:.1f} (> 50: {a['halt_days_median_above_50']}). "
-             f"H1a {'holds' if a['holds'] else 'is falsified'}."
+             f"H1a {'holds' if a['holds'] else 'is falsified'}"
+             f" (with D5-75: {'holds' if a['holds_with_d5_75'] else 'falsified'}; median q of "
+             f"the 2020 days {a['halt_days_median_q_d5_75']:.1f})."
              + (f" Without the first {SKIP_OPEN_MIN} minutes: median q "
                 f"{a['halt_days_median_q_no_open']:.1f}." if "halt_days_median_q_no_open" in a else ""),
              f"- H1b (VR** on ln W50): {v['H1b']}. With D5-75: {v['H1b_with_D5-75']}.",
-             f"- H1c: FOMC days more concentrated: {v['H1c_concentration']}; FOMC dummy in the "
-             f"H1b regression: {v['H1c_dummy']}. H1c {'holds' if v['H1c_holds'] else 'fails'}.",
+             f"- H1c: FOMC days more concentrated: {v['H1c_concentration']} (with D5-75: "
+             f"{v['H1c_concentration_with_D5-75']}); FOMC dummy in the "
+             f"H1b regression: {v['H1c_dummy']}. H1c {'holds' if v['H1c_holds'] else 'fails'}"
+             + (" on W50, and is fragile under the robustness rule." if v["H1c_holds"]
+                and "fragile" in v["H1c_concentration"] else "."),
              "", "Verdicts use raw two-sided tests at 5% (D-029). H1b and H1c concentration "
              "belong to the seven-test Holm family, adjusted once the H2 results exist; the "
              "H1c dummy is reported raw.",
              "", "### H1a: named days", "",
-             "| day | RV | RV decile | W50 (min) | q |"
+             "| day | RV | RV decile | W50 (min) | q | D5-75 (min) | q (D5-75) |"
              + (" W50 without open | q without open |" if "q_no_open" in at else ""),
-             "|---|---|---|---|---|" + ("---|---|" if "q_no_open" in at else "")]
+             "|---|---|---|---|---|---|---|" + ("---|---|" if "q_no_open" in at else "")]
     for day, r in at.iterrows():
         row = (f"| {day.date()} | {r['rv']:.3g} | {int(r['rv_decile']) + 1} | "
-               f"{r['w50']:.1f} | {r['q']:.1f} |")
+               f"{r['w50']:.1f} | {r['q']:.1f} | {r['d5_75']:.1f} | {r['q_d5_75']:.1f} |")
         if "q_no_open" in at:
             row += f" {r['w50_no_open']:.1f} | {r['q_no_open']:.1f} |"
         lines.append(row)

@@ -132,7 +132,10 @@ def draw(rt: dict[pd.Timestamp, np.ndarray], w50: dict, out: Path, labels: dict)
     ax.set_facecolor(SURFACE)
     for s in ("top", "right"):
         ax.spines[s].set_visible(False)
-    ax.legend(loc="lower right", frameon=False, fontsize=8)
+    # Upper left is the one corner neither curve passes through (lower right collided with
+    # the May 6 jump on the first render, 2026-11-06).
+    ax.legend(loc="upper left", fontsize=8, frameon=True, facecolor=SURFACE, edgecolor="none",
+              framealpha=0.9)
     out.parent.mkdir(parents=True, exist_ok=True)
     fig.savefig(out, dpi=200, facecolor=SURFACE, bbox_inches="tight")
     plt.close(fig)

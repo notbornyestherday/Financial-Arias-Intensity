@@ -88,7 +88,7 @@ def test_verdicts_on_a_planted_effect():
     res = h1.run(_synthetic_daily())
     v = res["verdicts"]
     assert v["H1b"] == "supported, and holds with D5-75"
-    assert v["H1c_concentration"] == "supported"
+    assert v["H1c_concentration"] == "supported, and holds with D5-75"
     assert v["H1c_dummy"].startswith("not significantly negative")
     assert v["H1c_holds"]
     assert set(v["holm_family_raw_p"]) == {"H1b", "H1c concentration"}
@@ -124,3 +124,12 @@ def test_missing_vr_column_names_the_fix():
         assert "vr_skip2" in str(e) and "--stages measures" in str(e)
     else:
         raise AssertionError("expected ValueError")
+
+
+def test_h1c_and_h1a_follow_the_robustness_rule():
+    """D5-75 that does not carry the FOMC effect makes H1c fragile; H1a reports D5-75 too."""
+    daily = _synthetic_daily(d575_noise=True)
+    res = h1.run(daily)
+    assert res["verdicts"]["H1c_concentration"] == "supported, but fragile (D5-75 disagrees)"
+    assert {"q_d5_75", "d5_75"} <= set(res["h1a_table"].columns)
+    assert "holds_with_d5_75" in res["h1a"]
