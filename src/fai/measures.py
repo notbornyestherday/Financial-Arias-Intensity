@@ -68,8 +68,12 @@ def variance_ratio(A: pd.DataFrame, base: int = config.VR_BASE_MIN,
 
 
 def variance_ratio_skip(A: pd.DataFrame, base: int = config.VR_BASE_MIN,
-                        long: int = config.VR_LONG_MIN) -> pd.Series:
+                        long: int = config.VR_LONG_MIN, skip: int = 1) -> pd.Series:
     """VR*(long/base): the variance ratio without neighbouring-block products (D-023).
+
+    ``skip=2`` gives VR** (D-024, the primary H1b measure): products of blocks one *and*
+    two apart are removed, so bounce that persists across one boundary (buy/sell runs)
+    cancels too; reversal over 15-30 minutes is still seen.
 
     VR* = (sum_j L_j^2 - 2 sum_j sum_{i,i+1 in j} b_i b_{i+1}) / sum_i b_i^2, where b are
     base-minute block sums and L the long-block sums they make up.
@@ -89,10 +93,10 @@ def variance_ratio_skip(A: pd.DataFrame, base: int = config.VR_BASE_MIN,
     nl = nb // m
     b = b[:, : nl * m].reshape(n_days, nl, m)
     long_sq = (b.sum(axis=2) ** 2).sum(axis=1)
-    neighbours = (b[:, :, 1:] * b[:, :, :-1]).sum(axis=(1, 2))
+    nearby = sum((b[:, :, k:] * b[:, :, :-k]).sum(axis=(1, 2)) for k in range(1, skip + 1))
     with np.errstate(invalid="ignore", divide="ignore"):
-        vr = (long_sq - 2 * neighbours) / (b ** 2).sum(axis=(1, 2))
-    return pd.Series(vr, index=A.index, name="vr_skip")
+        vr = (long_sq - 2 * nearby) / (b ** 2).sum(axis=(1, 2))
+    return pd.Series(vr, index=A.index, name="vr_skip" if skip == 1 else f"vr_skip{skip}")
 
 
 def benchmark_measures(A: pd.DataFrame) -> pd.DataFrame:
@@ -146,7 +150,9 @@ def daily_measures(R: pd.DataFrame, Rt: pd.DataFrame, rm_exclude=None) -> pd.Dat
         out[f"max_share{sfx}"] = (A ** 2).max(axis=1) / E
         out = out.join(husid_times(A).add_suffix(sfx))
     out["vr"] = variance_ratio(Rt)                  # registered H1b measure
-    out["vr_skip"] = variance_ratio_skip(Rt)        # primary since D-023 (bounce-robust)
+    out["vr_skip"] = variance_ratio_skip(Rt)        # D-023 (bounce-robust), reported
+    out["vr_skip2"] = variance_ratio_skip(Rt, skip=2)   # primary H1b measure since D-024
+    out["vr_skip_60"] = variance_ratio_skip(Rt, base=10, long=60)   # D-024 robustness
     out = out.join(benchmark_measures(Rt))
     out["n_obs"] = Rt.notna().sum(axis=1)
     return out
