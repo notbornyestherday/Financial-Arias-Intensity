@@ -5,7 +5,8 @@
     python scripts/run_all.py --vendor firstrate --symbol SPY --raw data/raw/firstrate/SPY_full_1min.zip --bar-label start
     python scripts/run_all.py --stages ingest          # just one stage
 
-Stages: ingest -> clean -> measures. Later weeks add liquidity, detection, vix, figures.
+Stages: ingest -> clean -> measures (which includes the liquidity weighting). Later weeks
+add detection, vix, figures.
 """
 
 from __future__ import annotations
@@ -24,9 +25,11 @@ from fai import config  # noqa: E402
 from fai.clean import clean, quality_by_day, write_dq_report  # noqa: E402
 from fai.ingest import (bar_label_diagnostics, load_alphavantage_dir,  # noqa: E402
                         load_firstrate, to_bar_start)
-from fai.measures import daily_measures  # noqa: E402
+from fai.liquidity import amihud, corwin_schultz, liquidity_percentile  # noqa: E402
+from fai.measures import daily_energy, daily_measures, normalizer  # noqa: E402
 from fai.seasonality import deseasonalize, seasonal_variance, to_matrix  # noqa: E402
 from fai.sessions import day_flags, nyse_sessions  # noqa: E402
+from fai.weighting import weighting_measures  # noqa: E402
 
 STAGES = ["ingest", "clean", "measures"]
 
@@ -76,7 +79,10 @@ def stage_measures(args) -> None:
     outage_days = dq.index[dq["outage"]]                    # D-016
     S2 = seasonal_variance(R, G, exclude=half_days)
     Rt = deseasonalize(R, G, S2)
-    daily = (daily_measures(R, Rt, rm_exclude=half_days.union(outage_days))   # D-021
+    rm_exclude = half_days.union(outage_days)                                   # D-021
+    weighted = liquidity_weighting(minutes, R, Rt, G, rm_exclude)
+    daily = (daily_measures(R, Rt, rm_exclude=rm_exclude)
+             .join(weighted)
              .join(sessions[["half_day"]])
              .join(dq[["n_missing_unexplained", "outage"]])
              .join(day_flags(R.index)))
@@ -86,6 +92,20 @@ def stage_measures(args) -> None:
     daily.to_csv(config.PROCESSED / f"{args.symbol}_daily{tag}.csv")   # computed measures only
     print(f"measures: {len(daily):,} days; outage days (D-016): "
           f"{', '.join(str(d.date()) for d in outage_days) or 'none'}")
+
+
+def liquidity_weighting(minutes, R, Rt, G, exclude) -> pd.DataFrame:
+    """FAI_w and its comparisons (brief Section 3; fai.weighting).
+
+    Percentiles judge each minute against the same minute of the prior 60 sessions,
+    with half-days and outage days left out of the reference.
+    """
+    C, V = to_matrix(minutes, "close"), to_matrix(minutes, "volume")
+    H, L = to_matrix(minutes, "high"), to_matrix(minutes, "low")
+    Pi = {"amihud": liquidity_percentile(amihud(R, C, V, G), exclude=exclude),
+          "cs": liquidity_percentile(corwin_schultz(H, L, C, G), exclude=exclude)}
+    R_m = normalizer(daily_energy(Rt), exclude=exclude)
+    return weighting_measures(Rt, R_m, Pi)
 
 
 def main() -> None:

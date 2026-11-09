@@ -49,8 +49,10 @@ VR_BASE_MIN = 5
 VR_LONG_MIN = 30
 
 # --- Liquidity weighting (Week 3) ---------------------------------------------
-AMIHUD_WINDOW_MIN = 30
+AMIHUD_WINDOW_MIN = 30        # trailing window for both proxies, lagged one minute
+LIQ_MIN_MINUTES = 5           # valid minutes needed in that window (early in the day)
 LIQ_PCT_WINDOW_DAYS = 60
+LIQ_PCT_MIN_DAYS = 40         # as SEAS_MIN_DAYS
 ZETA_CAP = 0.99
 CMIN_PERCENTILE = 5
 
