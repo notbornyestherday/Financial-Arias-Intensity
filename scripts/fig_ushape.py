@@ -30,6 +30,12 @@ TEST_YEARS = ("2010-01-01", "2025-12-31")
 INK, INK_2, MUTED = "#0b0b0b", "#52514e", "#898781"
 GRID, AXIS, SURFACE = "#e1e0d9", "#c3c2b7", "#fcfcfb"
 C_LINE = "#2a78d6"
+# Labels chosen after looking at the first render (2026-11-08): (minute after the open,
+# text, label offset in minutes, horizontal alignment). Each points at the highest
+# median within a few minutes of the event.
+ANNOTATIONS = [(30, "10:00 data releases", 0, "center"),
+               (270, "2:00 Fed statements and minutes", 0, "center"),
+               (389, "the close", -22, "right")]
 
 
 def profile(S2: pd.DataFrame, days) -> pd.DataFrame:
@@ -63,6 +69,14 @@ def draw(p: pd.DataFrame, out: Path) -> Path:
     x = p.index.to_numpy() + 0.5
     ax.fill_between(x, p["p10"], p["p90"], color=C_LINE, alpha=0.14, linewidth=0)
     ax.plot(x, p["median"], color=C_LINE, linewidth=1.6)
+    med = p["median"]
+    for tau, text, dx, ha in ANNOTATIONS:
+        near = med.iloc[max(0, tau - 2): min(len(med), tau + 8)]
+        t, y = near.idxmax(), near.max()
+        ax.annotate(text, xy=(t + 0.5, y), xytext=(t + 0.5 + dx, y + 1.1), ha=ha, va="bottom",
+                    fontsize=8, color=INK_2,
+                    arrowprops={"arrowstyle": "-", "color": MUTED, "linewidth": 0.7,
+                                "shrinkA": 1, "shrinkB": 2})
     ticks = np.arange(0, 391, 60)
     ax.set_xticks(ticks, [clock(t) for t in ticks])
     ax.set_xlim(0, 390)
