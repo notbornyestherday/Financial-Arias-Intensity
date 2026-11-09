@@ -70,15 +70,29 @@ def test_detect_events_finds_a_planted_burst():
     assert set(events.columns) >= {"day", "start", "end", "cut_off", "energy_share"}
 
 
-def test_placebos_skip_the_episode_and_take_the_nearest_rv():
-    cal = pd.bdate_range("2020-01-01", periods=200)
-    d = pd.DataFrame({"rv": np.linspace(1, 2, 200)}, index=cal)
-    named = [cal[100]]
-    d.loc[cal[95:106], "rv"] = d.at[cal[100], "rv"]          # same crisis: identical RV
-    pl = evt.placebo_days(d, named, cal, k=5, gap=10)
+def test_placebos_skip_the_named_episode_and_keep_one_per_episode():
+    cal = pd.bdate_range("2020-01-01", periods=400)
+    d = pd.DataFrame({"rv": np.linspace(1, 1.9, 400)}, index=cal)
+    named = [cal[200]]
+    d.loc[cal[180:221], "rv"] = d.at[cal[200], "rv"]        # the same crisis: identical RV
+    pl = evt.placebo_days(d, named, cal, k=5, gap=20)
     assert len(pl) == 5
-    assert not pl["day"].isin(cal[90:111]).any()            # outside +/- 10 sessions
-    assert pl["day"].isin(cal[[86, 87, 88, 89, 111, 112, 113, 114]]).all()   # the next-nearest
+    assert not pl["day"].isin(cal[180:221]).any()           # outside +/- 20 sessions
+    pos = np.sort([cal.get_loc(x) for x in pl["day"]])
+    assert (np.diff(pos) > 20).all()                        # one per episode
+    assert pl["rv_ratio"].between(0.5, 2).all()
+
+
+def test_no_placebo_is_better_than_a_much_calmer_one():
+    cal = pd.bdate_range("2020-01-01", periods=300)
+    d = pd.DataFrame({"rv": 1.0}, index=cal)
+    d.loc[cal[150], "rv"] = 10.0                            # nothing within a factor of 2
+    d.loc[cal[[30, 260]], "rv"] = 6.0                       # two other episodes that qualify
+    pl = evt.placebo_days(d, [cal[150]], cal)
+    assert list(pl["day"]) == list(cal[[30, 260]]) or list(pl["day"]) == list(cal[[260, 30]])
+    none = evt.placebo_days(d.assign(rv=lambda x: x["rv"].where(x.index == cal[150], 1.0)),
+                            [cal[150]], cal)
+    assert none.empty and list(none.columns) == ["for", "day", "rank", "rv_ratio"]
 
 
 def test_build_and_report_on_synthetic_tables():
@@ -91,7 +105,9 @@ def test_build_and_report_on_synthetic_tables():
     res = evt.build(daily, summary, daily.index)
     t = res["table"]
     assert (t["kind"] == "named").sum() == len(config.EVENTS)
-    assert (t["kind"] == "placebo").sum() == evt.N_PLACEBO * len(config.EVENTS)
+    n_pl = (t["kind"] == "placebo").sum()
+    missing = int((evt.N_PLACEBO - res["short"]).sum())        # named days short of 5
+    assert n_pl == evt.N_PLACEBO * len(config.EVENTS) - missing
     assert t["rv_decile"].between(1, 10).all()
     assert list(res["by_decile"].index) == list(range(1, 11))
     lines = evt.report(res)

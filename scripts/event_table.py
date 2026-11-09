@@ -6,8 +6,9 @@ here changes an H1 or H2 verdict.
 
 * Detection (fai.detection) runs on every session; days in the tests (2010-2025) are
   reported.
-* Placebo days: for each named day in config.EVENTS, the 5 test days closest in ln RV,
-  leaving out named days and the 10 sessions either side of any named day.
+* Placebo days (D-033, revising D-032): for each named day in config.EVENTS, 5 test days
+  close in ln RV, one per episode, leaving out named days and the 20 sessions either side
+  of any named day.
 * Event table: named and placebo days side by side; and the share of all test days with
   at least one detected event, by RV decile (how often the detector fires on days that
   nobody remembers).
@@ -38,7 +39,8 @@ h1 = importlib.util.module_from_spec(_spec)
 _spec.loader.exec_module(h1)
 
 N_PLACEBO = 5
-GAP_SESSIONS = 10
+GAP_SESSIONS = 20          # D-033 (was 10 in D-032)
+RV_RATIO_BAND = (0.5, 2.0) # D-033: a placebo's RV within a factor of 2 of the named day's
 
 
 def clock(tau) -> str:
@@ -49,22 +51,42 @@ def clock(tau) -> str:
 
 
 def placebo_days(d: pd.DataFrame, named, calendar, k: int = N_PLACEBO,
-                 gap: int = GAP_SESSIONS) -> pd.DataFrame:
-    """For each named day, the k test days closest in ln RV, outside every named day's
-    +/- ``gap`` sessions (``calendar`` is the full list of sessions). One row per match."""
+                 gap: int = GAP_SESSIONS, band: tuple = RV_RATIO_BAND) -> pd.DataFrame:
+    """For each named day, up to k test days close in ln RV, one per episode (D-033).
+
+    Candidates leave out named days and every named day's +/- ``gap`` sessions
+    (``calendar`` is the full list of sessions), and must have an RV ratio to the named
+    day inside ``band``. Picks go nearest first; once a day is picked, days within
+    ``gap`` sessions of it are skipped, so no two placebos for the same named day come
+    from the same episode. A named day with fewer qualifying days gets fewer (or no)
+    placebos. One row per match.
+    """
     named = pd.DatetimeIndex(named)
     pos = pd.Series(np.arange(len(calendar)), index=pd.DatetimeIndex(calendar))
     blocked = set()
     for p in pos.reindex(named).dropna().astype(int):
         blocked.update(range(p - gap, p + gap + 1))
     cand = d.loc[~d.index.isin(named) & ~pos.reindex(d.index).isin(blocked).to_numpy()]
+    cand_pos = pos.reindex(cand.index).to_numpy()
     rows = []
+    ratio_all = cand["rv"].to_numpy()
     for nd in named:
-        dist = (np.log(cand["rv"]) - np.log(d.at[nd, "rv"])).abs().nsmallest(k)
-        for rank, day in enumerate(dist.index, 1):
+        ratio = ratio_all / d.at[nd, "rv"]
+        dist = np.abs(np.log(ratio))
+        picked: list[int] = []
+        for j in np.argsort(dist, kind="stable"):
+            if not (band[0] <= ratio[j] <= band[1]):
+                break                                   # sorted by distance: none further qualify
+            if any(abs(cand_pos[j] - cand_pos[i]) <= gap for i in picked):
+                continue
+            picked.append(j)
+            if len(picked) == k:
+                break
+        for rank, j in enumerate(picked, 1):
+            day = cand.index[j]
             rows.append({"for": nd, "day": day, "rank": rank,
                          "rv_ratio": d.at[day, "rv"] / d.at[nd, "rv"]})
-    return pd.DataFrame(rows)
+    return pd.DataFrame(rows, columns=["for", "day", "rank", "rv_ratio"])
 
 
 def detection_by_decile(d: pd.DataFrame) -> pd.DataFrame:
@@ -97,8 +119,10 @@ def build(daily: pd.DataFrame, summary: pd.DataFrame, calendar) -> dict:
     table = pd.DataFrame(rows)
     table["vol_pct"] = 100 * np.sqrt(table["rv"])
     table["rv_decile"] = table["rv_decile"] + 1
+    counts = pl.groupby("for").size().reindex(named, fill_value=0)
     return {"sample": d, "table": table, "by_decile": detection_by_decile(d),
-            "reused": int(pl["day"].duplicated().sum())}
+            "reused": int(pl["day"].duplicated().sum()),
+            "short": counts[counts < N_PLACEBO]}
 
 
 def _fmt(v, f):
@@ -110,9 +134,9 @@ def report(res: dict) -> list[str]:
     det = d["n_events"].dropna()
     lines = ["# Event table (exploratory, D-032)", "",
              f"Detection on {len(det):,} test days: {float((det > 0).mean()):.1%} have at "
-             f"least one event. Named days and their placebo days (5 closest in RV, outside "
-             f"the 10 sessions either side of any named day; {res['reused']} placebo days "
-             "serve more than one named day). Vol = 100 x sqrt(RV), the day's volatility in "
+             f"least one event. Named days and their placebo days (D-033: up to 5 close in RV, "
+             f"RV within a factor of 2, one per episode, outside the 20 sessions either side "
+             f"of any named day; {res['reused']} placebo days serve more than one named day). Vol = 100 x sqrt(RV), the day's volatility in "
              "percent. q = W50 percentile within the RV decile (as H1a; low = concentrated). "
              "Largest event = the detected window holding the most energy. Read its start, "
              "not its length: sigma looks back 15 minutes, so a window can run up to 15 "
@@ -126,6 +150,11 @@ def report(res: dict) -> list[str]:
                      f"{int(r.rv_decile)} | {_fmt(r.w50, '.0f')} | {_fmt(r.q_w50, '.0f')} | "
                      f"{_fmt(r.d5_75, '.0f')} | {_fmt(r.vr_skip2, '.2f')} | {_fmt(r.f_bar, '.2f')} | "
                      f"{_fmt(r.n_events, '.0f')} | {window} | {_fmt(r.energy_share_events, '.0%')} |")
+    if len(res["short"]):
+        lines += ["", "Fewer than 5 placebos, because no other day in 2010-2025 outside the "
+                  "named day's own episode had RV within a factor of 2: "
+                  + "; ".join(f"{day.date()} ({n})" for day, n in res["short"].items())
+                  + ". These days are compared only within their RV decile (H1a)."]
     lines += ["", "## How often the detector fires, by RV decile (all test days)", "",
               "| RV decile | days | share with an event | mean events | mean energy share in events |",
               "|---|---|---|---|---|",
