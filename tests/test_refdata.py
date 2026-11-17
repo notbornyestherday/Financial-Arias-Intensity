@@ -1,11 +1,12 @@
-"""Checks on the hand-compiled and generated reference calendars (D-017)."""
+"""Checks on the hand-compiled and generated reference calendars (D-017, D-034)."""
 
 import importlib.util
 from pathlib import Path
 
 import pandas as pd
 
-from fai.sessions import day_flags, load_fomc_dates, load_macro_dates, nyse_sessions
+from fai.sessions import (day_flags, load_dividends, load_fomc_dates, load_macro_dates,
+                          nyse_sessions)
 
 ROOT = Path(__file__).resolve().parents[1]
 
@@ -81,3 +82,19 @@ def test_day_flags_use_the_calendars():
     f = day_flags(pd.to_datetime(["2013-09-18", "2020-03-23", "2012-05-01", "2012-05-02"]))
     assert f["fomc"].tolist() == [True, False, False, False]
     assert f["macro_release"].tolist() == [False, False, True, False]
+
+
+def test_spy_dividends_four_a_year_on_fridays_in_a_plausible_range():
+    div = load_dividends()
+    assert len(div) == 68
+    assert (div.groupby(div.index.year).size() == 4).all()
+    assert list(div.index.year.unique()) == list(range(2009, 2026))
+    assert (div.index.dayofweek == 4).all()                  # SPY goes ex on a Friday
+    assert div.between(0.4, 2.1).all()                       # about 0.3-0.6% of the price
+    assert div.index.is_monotonic_increasing
+
+
+def test_spy_ex_dividend_dates_are_trading_days():
+    div = load_dividends()
+    sessions = nyse_sessions("2009-01-01", "2025-12-31")
+    assert div.index.isin(sessions.index).all()

@@ -1,6 +1,6 @@
 # Reference tables
 
-Small, committed, not vendor data. How each was compiled is logged in `DECISIONS.md` (D-017).
+Small, committed, not vendor data. How each was compiled is logged in `DECISIONS.md` (D-017, D-034).
 
 - `fomc_dates.csv`: every FOMC statement and announcement 2009-2025 with its release time
   (ET). A day is an FOMC day only if `in_rth` is True (released 09:30-16:00); pre-open and
@@ -10,7 +10,12 @@ Small, committed, not vendor data. How each was compiled is logged in `DECISIONS
   by hand. Rows with `certain=False` are candidate days kept because the rule is ambiguous
   that month (January, some Good Friday months).
 
-`tests/test_refdata.py` checks both files: FOMC counts and release times by era, all
+- `spy_dividends.csv`: SPY's cash distribution per share by ex-dividend date, 2009-2025
+  (68 rows, four a year, all Fridays). The minute prices are unadjusted (D-010), so the H2
+  close-to-close return adds the dividend back on ex-dates. Compiled from two independent
+  dividend-history pages that agree on every row (sources in the file header).
+
+`tests/test_refdata.py` checks all three files: FOMC counts and release times by era, all
 regular-hours releases on NYSE trading days, and the ISM rule against ISM's published 2026
 schedule and dated historical releases.
 

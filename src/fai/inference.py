@@ -81,6 +81,25 @@ def fe_ols(y, X: dict, groups, lag: int | None = None) -> pd.DataFrame:
                          "n": n, "lag": L}, index=names)
 
 
+def nw_mean(v, lag: int | None = None) -> dict:
+    """Mean of a series and its Newey-West standard error (registered lag by default).
+
+    Used for the Clark-West statistic in H2. Rows must be in time order; missing values
+    are dropped.
+    """
+    v = np.asarray(v, float)
+    v = v[np.isfinite(v)]
+    u = v - v.mean()
+    n = u.size
+    L = nw_lag(n) if lag is None else int(lag)
+    s = u @ u
+    for k in range(1, L + 1):
+        s += 2 * (1 - k / (L + 1)) * (u[k:] @ u[:-k])
+    se = float(np.sqrt(max(s, 0.0)) / n)
+    t = float(v.mean() / se) if se > 0 else float("nan")
+    return {"mean": float(v.mean()), "se": se, "t": t, "n": n, "lag": L}
+
+
 def p_two_sided(t: float) -> float:
     """Two-sided p-value of a t statistic under the normal approximation."""
     return math.erfc(abs(float(t)) / math.sqrt(2.0))

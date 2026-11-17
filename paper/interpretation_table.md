@@ -1,10 +1,10 @@
 # Interpretation table (written before any H1 or H2 result)
 
 How each possible outcome of the pre-registered tests (HYPOTHESES.md, with the changes in
-DECISIONS.md D-016 to D-029) will be read. Written in advance so the reading cannot be
+DECISIONS.md D-016 to D-034) will be read. Written in advance so the reading cannot be
 fitted to the results; it is the skeleton of the Results and Discussion sections.
 
-Drafted in conversation on 2026-11-05 and 2026-11-06 (Esther's answers, lightly edited).
+Drafted in conversation on 2026-11-05 and 2026-11-06 (Esther's answers, lightly edited); H2 rows extended on 2026-11-16 (D-034), before any H2 result.
 
 Across every row: a test is judged on its raw two-sided p at 5%. If it passes raw but not
 after the Holm adjustment over the seven confirmatory tests (D-029), the paper calls it
@@ -61,13 +61,26 @@ FAI_w is RV after three steps: deseasonalizing, normalizing by the trailing 60 d
 | (i) fails | FAI_w adds nothing to next-day VIX beyond RV, the return and VIX's own level and change. The weighting is not supported. |
 | The result holds only without the VIX-level control (registered regression passes, D-027 regression fails) | The registered pass came from VIX mean reversion carried by the trailing normalization, not from anything new in FAI_w. Reported as a fail, with both versions shown. |
 
-### Out of sample (2019-2025, Clark-West at 5%; both H2a and H2b)
+### Out of sample (2019-2025; both H2a and H2b)
+
+A pass needs both a one-sided Clark-West p below 5% and a lower 2019-2025 MSE for the model with X (D-034).
 
 | Outcome | What it would mean |
 |---|---|
 | In-sample pass and out-of-sample pass | A forecasting result, within the limits of one market and one period. Statistical, not economic: a lower forecast error is not shown to be tradable, and the size of the improvement is reported next to the test. |
 | In-sample pass, out-of-sample fail | Not a forecasting result: the relation fits 2010-2018 but does not carry forward. 2019-2025 holds COVID and 2022, so how VIX reacts may have changed; the paper reports a fail anyway and does not re-split the sample. |
 | In-sample fail, out-of-sample pass | Treated as noise and not claimed: a test period can be lucky, and the hypothesis needs both. |
+| Clark-West significant, but the model with X has the higher MSE | A fail (D-034). Clark-West is saying X probably carries some information, but in 2019-2025 the forecasts with X were not more accurate. The paper reports both numbers and does not claim a forecasting result. |
+
+### Influence check: leave one year out (exploratory, D-034)
+
+Each in-sample H2 test refitted nine times, leaving out one year of 2010-2018. The verdict comes from the full sample; this row says how to describe it.
+
+| Outcome | What it would mean |
+|---|---|
+| The result keeps its sign and stays significant in all nine refits | The result describes 2010-2018, not one episode. Reported in one sentence. |
+| It loses significance when one year is left out | The paper says which year: "significant, but resting largely on 2018" (or whichever year). The verdict stands; the reading is weaker, and the Discussion names the episode in that year (Volmageddon, the August 2011 downgrade, August 2015) as what the result describes. |
+| A null result becomes significant when one year is left out | Not claimed: looking for the year whose removal produces significance is searching. Reported in the table only. |
 
 ## Week 3 pivot check: does the weighting change anything? (D-028)
 

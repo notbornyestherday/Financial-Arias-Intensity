@@ -79,6 +79,16 @@ def load_fomc_dates(rth_only: bool = True) -> pd.DataFrame:
     return df
 
 
+def load_dividends() -> pd.Series:
+    """SPY cash dividends per share by ex-dividend date, from ref/spy_dividends.csv
+    (columns: date,amount,notes). Used to add the dividend back to the close-to-close
+    return on ex-dates, since prices are unadjusted (D-010)."""
+    df = _load_ref("spy_dividends.csv")
+    if "amount" not in df.columns:
+        return pd.Series(dtype=float, name="amount")
+    return df["amount"].astype(float)
+
+
 def load_macro_dates() -> pd.DataFrame:
     """ISM release days from ref/macro_dates.csv (columns: date,time_et,release,certain,notes)."""
     return _load_ref("macro_dates.csv")
