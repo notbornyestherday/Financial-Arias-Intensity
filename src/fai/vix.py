@@ -12,10 +12,13 @@ on SPY day d is known before the window of d ln VIX_{d+1} opens.
 
 Data conventions:
 
-* VIX changes are taken on VIX's own calendar and then read on SPY days: the change into
-  tomorrow runs from today's close to the next VIX close, whatever day that is; today's
-  change runs from the previous VIX close. ``alignment`` reports any SPY day without a
-  VIX close.
+* VIX changes run over SPY sessions (D-035): VIX closes on days with no SPY session are
+  dropped first, so the change into tomorrow runs from today's close to the VIX close of
+  the next SPY session, and today's change from the previous session's. From 2022 Cboe's
+  history file carries values on market holidays (from its extended overnight sessions);
+  taking the next VIX date instead (the first run, Nov 17) let about 27 out-of-sample
+  targets end on a holiday value. ``alignment`` reports the dates dropped and any SPY
+  session without a VIX close.
 * r_d is SPY's close-to-close log return, from the last regular-hours close of each
   session to the next. Prices are unadjusted (D-010), so on an ex-dividend day the price
   drops by the dividend without any market move; the dividend is added back:
@@ -93,7 +96,7 @@ def h2_frame(daily: pd.DataFrame, close: pd.Series, vix_close: pd.Series,
     f["ln_rv"] = np.log(daily["rv"])
     f["r"] = close_to_close(close, dividends).reindex(f.index)
     f["r_neg"] = np.minimum(f["r"], 0.0)
-    f = f.join(vix_changes(vix_close))
+    f = f.join(vix_changes(vix_close.loc[vix_close.index.isin(daily.index)]))   # D-035
     f["jump_next"] = (f["dlnvix_next"] > JUMP).astype(float).where(f["dlnvix_next"].notna())
     for col in ["fai_w", "fai", "w50", "d5_75", "fai_w_cs", "fai_c", "f_bar"]:
         if col in daily.columns:
@@ -106,7 +109,9 @@ def h2_frame(daily: pd.DataFrame, close: pd.Series, vix_close: pd.Series,
 
 
 def alignment(spy_days: pd.DatetimeIndex, vix_close: pd.Series) -> dict:
-    """Calendar checks: SPY days with no VIX close, and VIX dates that are not SPY days."""
+    """Calendar checks over the span of ``spy_days`` (pass every SPY session, half-days
+    included): sessions with no VIX close, and VIX dates with no SPY session (market
+    holidays; dropped before changes are taken, D-035)."""
     v = vix_close.dropna()
     lo, hi = spy_days.min(), spy_days.max()
     v_in = v.index[(v.index >= lo) & (v.index <= hi)]

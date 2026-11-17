@@ -31,7 +31,21 @@ def test_target_is_tomorrows_change_not_todays():
     assert np.isclose(f.loc[spy[1], "ln_vix"], math.log(20))
 
 
-def test_missing_vix_day_runs_on_vixs_own_calendar():
+def test_vix_values_on_market_holidays_are_skipped():
+    """D-035: Cboe's file has values on some market holidays (2022 on); the change into
+    tomorrow must run to the next SPY session's close, not to the holiday value."""
+    spy = pd.to_datetime(["2022-05-26", "2022-05-27", "2022-05-31", "2022-06-01"])
+    vix_close = pd.Series([27.50, 25.72, 26.54, 26.19, 25.69],
+                          index=pd.to_datetime(["2022-05-26", "2022-05-27", "2022-05-30",
+                                                "2022-05-31", "2022-06-01"]))
+    daily = pd.DataFrame({"rv": 1e-4, "in_tests": True}, index=spy)
+    f = vix.h2_frame(daily, pd.Series(100.0, index=spy), vix_close)
+    assert np.isclose(f.loc["2022-05-27", "dlnvix_next"], math.log(26.19 / 25.72))
+    assert np.isclose(f.loc["2022-05-31", "dlnvix"], math.log(26.19 / 25.72))
+    assert vix.alignment(spy, vix_close)["vix_days_not_spy"] == ["2022-05-30"]
+
+
+def test_missing_vix_day_runs_to_the_next_session_with_a_close():
     spy = pd.bdate_range("2020-01-06", periods=5)                  # Mon-Fri
     vix_close = pd.Series([10.0, 12.0, 15.0, 20.0], index=spy.delete(2))   # no Wednesday
     daily = pd.DataFrame({"rv": 1e-4, "in_tests": True}, index=spy)

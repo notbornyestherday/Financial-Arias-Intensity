@@ -295,7 +295,8 @@ def run(daily, close, vix_close, dividends) -> dict:
     span = in_tests_days[(in_tests_days >= pd.Timestamp(config.IN_SAMPLE[0]))
                          & (in_tests_days <= pd.Timestamp(config.OUT_OF_SAMPLE[1]))]
     ex = dividends.index[(dividends.index >= span.min()) & (dividends.index <= span.max())]
-    notes = {"alignment": vix.alignment(span, vix_close),
+    sessions = frame.index[(frame.index >= span.min()) & (frame.index <= span.max())]
+    notes = {"alignment": vix.alignment(sessions, vix_close),
              "n_test_days": int(len(span)), "n_used": int(len(d)),
              "dropped": [str(x.date()) for x in span.difference(d.index)],
              "n_ex_dividend_days": int(len(ex)),
@@ -333,8 +334,9 @@ def section(name: str, res: dict, holm_t: pd.DataFrame | None) -> list[str]:
              f"days; {nt['n_ex_dividend_days']} ex-dividend days with the dividend added back.",
              f"Days dropped for a missing variable: {', '.join(nt['dropped']) or 'none'}. "
              f"SPY days without a VIX close: "
-             f"{', '.join(nt['alignment']['spy_days_without_vix']) or 'none'}. VIX dates that "
-             f"are not SPY sessions: {', '.join(nt['alignment']['vix_days_not_spy']) or 'none'}.",
+             f"{', '.join(nt['alignment']['spy_days_without_vix']) or 'none'}. VIX dates with "
+             f"no SPY session, dropped before VIX changes are taken (D-035): "
+             f"{', '.join(nt['alignment']['vix_days_not_spy']) or 'none'}.",
              "", "### Verdicts (D-027 regression, raw p at 5%)", ""]
     for k in ["H2a (i)", "H2a (ii)", "H2b", "H2a out of sample", "H2b out of sample"]:
         extra = f" With D5-75: {v[k]['with_d5_75']}." if "with_d5_75" in v[k] else ""
