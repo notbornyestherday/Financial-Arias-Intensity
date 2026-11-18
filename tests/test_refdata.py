@@ -5,7 +5,8 @@ from pathlib import Path
 
 import pandas as pd
 
-from fai.sessions import (day_flags, load_dividends, load_fomc_dates, load_macro_dates,
+from fai.sessions import (day_flags, load_dividends, load_fed_chair_dates, load_fomc_dates,
+                          load_macro_dates,
                           nyse_sessions)
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -98,3 +99,29 @@ def test_spy_ex_dividend_dates_are_trading_days():
     div = load_dividends()
     sessions = nyse_sessions("2009-01-01", "2025-12-31")
     assert div.index.isin(sessions.index).all()
+
+
+def test_fed_chair_dates_two_hearings_a_round_and_jackson_hole():
+    """D-025: every Monetary Policy Report round has one House and one Senate day, no more
+    than three weeks apart; one Jackson Hole keynote a year except 2013 and 2015."""
+    df = load_fed_chair_dates()
+    assert len(df) == 83 and df.index.is_unique and df.index.is_monotonic_increasing
+    assert set(df["event"]) == {"mpr_house", "mpr_senate", "jackson_hole"}
+    assert (df.index.dayofweek < 5).all()
+    mpr = df[df["event"] != "jackson_hole"]
+    for year, g in mpr.groupby(mpr.index.year):
+        assert (g["event"] == "mpr_house").sum() == 2 and len(g) == 4, year
+        for half in (g.iloc[:2], g.iloc[2:]):                 # one round each half-year
+            assert set(half["event"]) == {"mpr_house", "mpr_senate"}, year
+            assert (half.index[1] - half.index[0]).days <= 21, year
+    jh = df[df["event"] == "jackson_hole"]
+    assert sorted(set(range(2009, 2026)) - set(jh.index.year)) == [2013, 2015]
+    assert (jh.index.month == 8).all()
+    times = df["time_et"].dropna()
+    assert times.between("09:00", "15:59").all()              # every stated start is daytime
+
+
+def test_fed_chair_dates_are_trading_days():
+    df = load_fed_chair_dates()
+    sessions = nyse_sessions("2009-01-01", "2025-12-31")
+    assert df.index.isin(sessions.index).all()

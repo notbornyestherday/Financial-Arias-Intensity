@@ -89,6 +89,14 @@ def load_dividends() -> pd.Series:
     return df["amount"].astype(float)
 
 
+def load_fed_chair_dates() -> pd.DataFrame:
+    """Fed Chair appearances during regular hours from ref/fed_chair_dates.csv (columns:
+    date,time_et,event,chair,notes): the semiannual Monetary Policy Report testimony days
+    (mpr_house, mpr_senate) and the Jackson Hole keynote (jackson_hole), 2009-2025. Used only
+    by the exploratory H1b version that leaves them out (D-025 a)."""
+    return _load_ref("fed_chair_dates.csv")
+
+
 def load_macro_dates() -> pd.DataFrame:
     """ISM release days from ref/macro_dates.csv (columns: date,time_et,release,certain,notes)."""
     return _load_ref("macro_dates.csv")

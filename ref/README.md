@@ -1,6 +1,6 @@
 # Reference tables
 
-Small, committed, not vendor data. How each was compiled is logged in `DECISIONS.md` (D-017, D-034).
+Small, committed, not vendor data. How each was compiled is logged in `DECISIONS.md` (D-017, D-025, D-034).
 
 - `fomc_dates.csv`: every FOMC statement and announcement 2009-2025 with its release time
   (ET). A day is an FOMC day only if `in_rth` is True (released 09:30-16:00); pre-open and
@@ -15,7 +15,13 @@ Small, committed, not vendor data. How each was compiled is logged in `DECISIONS
   close-to-close return adds the dividend back on ex-dates. Compiled from two independent
   dividend-history pages that agree on every row (sources in the file header).
 
-`tests/test_refdata.py` checks all three files: FOMC counts and release times by era, all
+- `fed_chair_dates.csv`: Fed Chair appearances in regular hours, 2009-2025 (D-025 a): the
+  semiannual Monetary Policy Report hearing days (House and Senate) and the Chair's Jackson
+  Hole keynote, 83 rows. Only the exploratory H1b version in `scripts/robustness.py` uses it.
+  Compiled 2026-11-17 from the Board's testimony and speech pages (sources and the
+  regular-hours rule in the file header).
+
+`tests/test_refdata.py` checks all four files: FOMC counts and release times by era, all
 regular-hours releases on NYSE trading days, and the ISM rule against ISM's published 2026
 schedule and dated historical releases.
 

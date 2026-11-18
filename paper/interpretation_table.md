@@ -1,7 +1,7 @@
 # Interpretation table (written before any H1 or H2 result)
 
 How each possible outcome of the pre-registered tests (HYPOTHESES.md, with the changes in
-DECISIONS.md D-016 to D-034) will be read. Written in advance so the reading cannot be
+DECISIONS.md D-016 to D-036) will be read. Written in advance so the reading cannot be
 fitted to the results; it is the skeleton of the Results and Discussion sections.
 
 Drafted in conversation on 2026-11-05 and 2026-11-06 (Esther's answers, lightly edited); H2 rows extended on 2026-11-16 (D-034), before any H2 result.
@@ -91,5 +91,65 @@ Trigger: correlation of ln FAI_w with ln FAI over the test days, so the only dif
 | 0.95 or above | The weighting barely changes which days look intense, so FAI_w is close to a relabelled FAI. As the brief planned, the paper reframes around concentration (W50, D5-75), which is already the headline; the weighting is reported as a tested idea that did not separate from the unweighted measure, and H2a (ii) is read knowing it has little power. Expected, not a setback. |
 | Below 0.95 | The weighting reorders days enough to be worth testing, so H2a (ii) has room to find something. Not a result by itself: a different measure is not a better one, and only H2a and the out-of-sample test can show that. |
 | The correlation with RV is near 1 in levels but not in logs | A few crisis days drive the levels figure; the logs figure describes the typical day. Shown only to keep the brief's version visible. |
+
+## Robustness checks (D-018, H3, D-025 a; written 2026-11-17, before the robustness run)
+
+Choices in DECISIONS.md D-036. None of these can change a registered verdict, and none is in the Holm family. D-018 and the Fed Chair version are exploratory; H3 is a registered check whose prediction is no improvement. Drafted by Claude as a study document and settled with Esther's answers the same evening.
+
+### D-018 (a): the benchmarks as controls
+
+H2b (ln W50: t -2.39 in 2010-2018; fails Holm and out of sample).
+
+| Outcome | What it would mean |
+|---|---|
+| W50 keeps its sign and significance with all three controls | The in-sample link to next-day VIX is about when the energy arrived, not how uneven, jumpy or downward the day was. Still not a forecasting result: H2b failed out of sample and after Holm. One sentence in Results. |
+| W50 loses significance with the RQ ratio (alone or with all three) | The link belongs to unevenness, not timing: W50 was standing in for how spiky the day was, whatever the order of the minutes. Timing adds nothing even in sample. Said plainly. |
+| W50 loses significance only with jump share | The link belongs to isolated one-minute jumps, not to concentration over many minutes. Consistent with the "jolts" reading of b < 0 (a jump raises the price of crash insurance), but credited to jumps. |
+| W50 loses significance only with downside share | The link is about how much energy came from falling minutes: direction, not timing. The regression already controls for the day's return and its downside, so this is an intraday version of the leverage effect. |
+| W50 changes sign | Not interpreted: with correlated regressors a sign can flip without meaning much. Table only. |
+
+H1b (ln W50: t -0.55; no effect for the controls to explain).
+
+| Outcome | What it would mean |
+|---|---|
+| W50 stays not significant | As expected. One sentence. |
+| W50 becomes significant only once a benchmark is added | Not claimed: adding controls to a null until it turns significant is searching (the same rule as the leave-one-year-out row). Table only. |
+
+### D-018 (b): each benchmark in place of W50 (2010-2018)
+
+| Outcome | What it would mean |
+|---|---|
+| A benchmark predicts next-day VIX | A fact about an existing measure, reported as exploratory. If it is jump share, it connects to the jumps literature (Andersen, Bollerslev & Diebold 2007), which is checked before anything is said about it. |
+| A benchmark predicts reversal (VR**) | Exploratory. VR** is built to ignore bid-ask bounce, so this would say isolated jumps partly undo themselves over 15-30 minutes. A possible depth item, not a claim. |
+| None predicts either | The null is broader than W50: no measure of within-day shape, ordered or not, adds to RV here. One sentence. |
+
+### D-018 (c): out of sample, 2019-2025 (Clark-West p < 5% and R2_OS > 0, as D-034)
+
+W50's row repeats the registered H2b result (a fail) for comparison.
+
+| Outcome | What it would mean |
+|---|---|
+| No benchmark passes | No measure of within-day shape forecasts next-day VIX beyond RV and VIX's own state. One sentence; it widens the negative result beyond W50. |
+| A benchmark passes where W50 fails | Interesting: the information sits in how uneven or jumpy the day was, not in when the energy arrived. Exploratory (three measures, no adjustment for trying three; one market, one period): reported in Results and Discussion and in one line of the conclusion labelled exploratory; in the abstract only if a check registered later confirms it. |
+
+### H3: the differenced signal
+
+A comparison improves if the differenced version passes the registered rule where r~ fails. Holm over the six main comparisons (H1b, H2a (i), H2a (ii), H2b and both out-of-sample tests); D5-75 versions shown, not judged.
+
+| Outcome | What it would mean | Sentence for the paper |
+|---|---|---|
+| No comparison improves | As predicted | "Replacing the signal with its first difference improves none of the tests." |
+| One improves on its raw p but not after Holm | Improves before Holm only: within chance, not a finding | "One of six comparisons passes with the differenced signal, but not after adjusting for the six, which is within what chance would produce." |
+| One improves and survives Holm | Not as predicted | "With the differenced signal, [test] passes, even after adjusting for the six comparisons. Because differencing amplifies bid-ask bounce, we do not interpret this until it passes its own simulated null check." |
+
+### Fed Chair version of H1b (D-025 a)
+
+FOMC days and the 83 days in `ref/fed_chair_dates.csv` left out (about 78 fall in 2010-2025, roughly 2% of the H1b sample, so little change is expected). Exploratory because news days concentrate energy without reversing, so leaving them out can only help H1b; the registered sample stays primary and both are reported.
+
+| Outcome | What it would mean |
+|---|---|
+| b stays near zero (not significant) | Information days were not hiding a reversal effect. One sentence. |
+| b becomes significantly positive | Exploratory only; the registered null stands, because the sample was fixed in advance. Read as: news days might mask a small liquidity-reversal effect. Weighed on Nov 20 against the other depth-list candidates, with its own null check if chosen. If only one of W50 and D5-75 agrees, it is fragile under the usual rule. |
+| b becomes significantly negative | Concentrated days without Fed Chair news keep going rather than reverse. Read with the H1b b < 0 row: news versus liquidity spiral, with VR*(60/10) as the tie-breaker. Reported, not claimed. |
 
 After the run, every row above is reported as it came out, including the ones that go against the hypotheses.

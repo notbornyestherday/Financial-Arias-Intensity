@@ -1,0 +1,100 @@
+# Fed Chair appearances during regular hours, 2009-2025 (D-025): the semiannual Monetary Policy
+# Report testimony (House Financial Services and Senate Banking, one day each) and the Chair's
+# keynote at the Kansas City Fed's Jackson Hole symposium. Ordinary speeches are not included.
+# Used only for the exploratory H1b version that leaves these days out (D-025 a); the registered
+# H1 samples are unchanged. Compiled 2026-11-17.
+# - Testimony dates: federalreserve.gov testimony pages (newsevents/testimony/<chair><yyyymmdd>a.htm);
+#   the second day is the page's "identical remarks ... on <date>" note. Every hearing day is kept,
+#   whether the Chair read the statement that day or submitted it and took questions.
+# - Jackson Hole: federalreserve.gov speech pages (newsevents/speech/<chair><yyyymmdd>a.htm). No Chair
+#   keynote in 2013 (Bernanke did not attend) or 2015 (Yellen did not attend).
+# - time_et: start time (ET) where a source states it (Senate Banking hearing pages, "for release on
+#   delivery" lines, hearing transcripts, the Kansas City Fed agenda); blank where none was found.
+#   Hearings last two to three hours and keynotes about an hour; every row starts before 16:00 and
+#   runs past 09:30, so every row is a regular-hours appearance (2010-02-25 starts at 09:00).
+# - 2020-08-27 and 2025-08-22 are also in fomc_dates.csv (revised Statement on Longer-Run Goals);
+#   2025-08-22 is already an FOMC day.
+date,time_et,event,chair,notes
+2009-02-24,10:11,mpr_senate,Bernanke,hearing transcript S. Hrg. 111-53: met at 10:11 a.m.
+2009-02-25,,mpr_house,Bernanke,identical remarks (bernanke20090224a)
+2009-07-21,10:00,mpr_house,Bernanke,statement for release on delivery 10:00 a.m. EDT
+2009-07-22,10:00,mpr_senate,Bernanke,Senate Banking hearing page 10:00 AM
+2009-08-21,,jackson_hole,Bernanke,"Reflections on a Year of Crisis" (2009speech.htm)
+2010-02-24,,mpr_house,Bernanke,bernanke20100224a
+2010-02-25,09:00,mpr_senate,Bernanke,Senate Banking hearing page 09:00 AM
+2010-07-21,14:00,mpr_senate,Bernanke,Senate Banking hearing page 02:00 PM
+2010-07-22,,mpr_house,Bernanke,identical remarks (2010testimony.htm)
+2010-08-27,,jackson_hole,Bernanke,2010speech.htm
+2011-03-01,10:00,mpr_senate,Bernanke,Senate Banking hearing page 10:00 AM (bernanke20110301a)
+2011-03-02,,mpr_house,Bernanke,identical remarks (bernanke20110301a)
+2011-07-13,10:00,mpr_house,Bernanke,statement for release on delivery 10:00 a.m. EDT (bernanke20110713a)
+2011-07-14,10:00,mpr_senate,Bernanke,Senate Banking hearing page 10:00 AM
+2011-08-26,10:00,jackson_hole,Bernanke,bernanke20110826a; for release on delivery 10:00 a.m. EDT
+2012-02-29,10:00,mpr_house,Bernanke,bernanke20120229a; committee met at 10 a.m.
+2012-03-01,,mpr_senate,Bernanke,identical remarks (bernanke20120229a)
+2012-07-17,,mpr_senate,Bernanke,bernanke20120717a
+2012-07-18,,mpr_house,Bernanke,identical remarks (bernanke20120717a)
+2012-08-31,10:00,jackson_hole,Bernanke,bernanke20120831a; KC Fed agenda 8 a.m. MT opening remarks
+2013-02-26,10:00,mpr_senate,Bernanke,bernanke20130226a; for release on delivery 10:00 a.m.
+2013-02-27,,mpr_house,Bernanke,identical remarks (bernanke20130226a)
+2013-07-17,,mpr_house,Bernanke,bernanke20130717a (statement released 8:30 a.m.)
+2013-07-18,,mpr_senate,Bernanke,identical remarks (bernanke20130717a)
+2014-02-11,,mpr_house,Yellen,yellen20140211a
+2014-02-27,,mpr_senate,Yellen,identical remarks (yellen20140211a)
+2014-07-15,,mpr_senate,Yellen,yellen20140715a
+2014-07-16,,mpr_house,Yellen,identical remarks (yellen20140715a)
+2014-08-22,,jackson_hole,Yellen,yellen20140822a
+2015-02-24,10:00,mpr_senate,Yellen,yellen20150224a; for release on delivery 10:00 a.m. EST
+2015-02-25,,mpr_house,Yellen,identical remarks (2015testimony.htm)
+2015-07-15,10:03,mpr_house,Yellen,yellen20150715a; committee met at 10:03 a.m.
+2015-07-16,,mpr_senate,Yellen,identical remarks (2015testimony.htm)
+2016-02-10,,mpr_house,Yellen,yellen20160210a
+2016-02-11,,mpr_senate,Yellen,identical remarks (yellen20160210a)
+2016-06-21,,mpr_senate,Yellen,yellen20160621a
+2016-06-22,,mpr_house,Yellen,identical remarks (yellen20160621a)
+2016-08-26,,jackson_hole,Yellen,KC Fed symposium Aug 25-27; Chair calendar and press schedule
+2017-02-14,,mpr_senate,Yellen,yellen20170214a
+2017-02-15,,mpr_house,Yellen,identical remarks (yellen20170214a)
+2017-07-12,,mpr_house,Yellen,yellen20170712a (statement released 8:30 a.m.)
+2017-07-13,,mpr_senate,Yellen,identical remarks (2017-testimony.htm)
+2017-08-25,,jackson_hole,Yellen,KC Fed symposium Aug 24-26; Chair calendar and agenda (Friday morning)
+2018-02-27,,mpr_house,Powell,powell20180226a page dated February 27
+2018-03-01,10:01,mpr_senate,Powell,identical remarks (powell20180226a); committee met at 10:01 a.m.
+2018-07-17,10:00,mpr_senate,Powell,powell20180717a; for release on delivery 10 a.m. EDT
+2018-07-18,,mpr_house,Powell,identical remarks (2018-testimony.htm)
+2018-08-24,10:00,jackson_hole,Powell,powell20180824a; for release on delivery 10:00 a.m. EDT
+2019-02-26,,mpr_senate,Powell,powell20190226a
+2019-02-27,,mpr_house,Powell,identical remarks (2019-testimony.htm)
+2019-07-10,,mpr_house,Powell,powell20190710a
+2019-07-11,,mpr_senate,Powell,identical remarks (2019-testimony.htm)
+2019-08-23,,jackson_hole,Powell,powell20190823a
+2020-02-11,,mpr_house,Powell,powell20200211a
+2020-02-12,,mpr_senate,Powell,identical remarks (powell20200211a)
+2020-06-16,10:00,mpr_senate,Powell,powell20200616a; for release on delivery 10:00 a.m. EDT
+2020-06-17,,mpr_house,Powell,identical remarks (powell20200616a)
+2020-08-27,09:10,jackson_hole,Powell,powell20200827a; webcast; time as in fomc_dates.csv
+2021-02-23,,mpr_senate,Powell,2021-testimony.htm
+2021-02-24,,mpr_house,Powell,identical remarks (2021-testimony.htm)
+2021-07-14,,mpr_house,Powell,2021-testimony.htm
+2021-07-15,,mpr_senate,Powell,identical remarks (2021-testimony.htm)
+2021-08-27,,jackson_hole,Powell,powell20210827a; webcast
+2022-03-02,,mpr_house,Powell,powell20220302a
+2022-03-03,,mpr_senate,Powell,identical remarks (powell20220302a)
+2022-06-22,,mpr_senate,Powell,powell20220622a
+2022-06-23,,mpr_house,Powell,identical remarks (2022-testimony.htm)
+2022-08-26,,jackson_hole,Powell,powell20220826a
+2023-03-07,10:00,mpr_senate,Powell,powell20230307a; scheduled 10:00 ET
+2023-03-08,,mpr_house,Powell,identical remarks (powell20230307a)
+2023-06-21,,mpr_house,Powell,powell20230621a
+2023-06-22,10:00,mpr_senate,Powell,identical remarks (2023-testimony.htm); for release on delivery 10:00 a.m. EDT
+2023-08-25,,jackson_hole,Powell,powell20230825a
+2024-03-06,,mpr_house,Powell,powell20240306a
+2024-03-07,,mpr_senate,Powell,identical remarks (powell20240306a); statement released 9:40 a.m.
+2024-07-09,10:00,mpr_senate,Powell,powell20240709a; live at 10:00 a.m. ET
+2024-07-10,10:00,mpr_house,Powell,identical remarks (powell20240709a); House hearing 10 a.m. EDT
+2024-08-23,,jackson_hole,Powell,powell20240823a
+2025-02-11,,mpr_senate,Powell,powell20250211a
+2025-02-12,,mpr_house,Powell,identical remarks (2025-testimony.htm)
+2025-06-24,,mpr_house,Powell,powell20250624a
+2025-06-25,10:00,mpr_senate,Powell,Senate Banking hearing page 10:00 AM
+2025-08-22,10:00,jackson_hole,Powell,powell20250822a; scheduled about 10 a.m. ET

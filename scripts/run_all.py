@@ -26,7 +26,7 @@ from fai.clean import clean, quality_by_day, write_dq_report  # noqa: E402
 from fai.ingest import (bar_label_diagnostics, load_alphavantage_dir,  # noqa: E402
                         load_firstrate, to_bar_start)
 from fai.liquidity import amihud, corwin_schultz, liquidity_percentile  # noqa: E402
-from fai.measures import daily_energy, daily_measures, normalizer  # noqa: E402
+from fai.measures import daily_energy, daily_measures, normalizer, signal  # noqa: E402
 from fai.seasonality import deseasonalize, seasonal_variance, to_matrix  # noqa: E402
 from fai.sessions import day_flags, nyse_sessions  # noqa: E402
 from fai.weighting import weighting_measures  # noqa: E402
@@ -105,7 +105,14 @@ def liquidity_weighting(minutes, R, Rt, G, exclude) -> pd.DataFrame:
     Pi = {"amihud": liquidity_percentile(amihud(R, C, V, G), exclude=exclude),
           "cs": liquidity_percentile(corwin_schultz(H, L, C, G), exclude=exclude)}
     R_m = normalizer(daily_energy(Rt), exclude=exclude)
-    return weighting_measures(Rt, R_m, Pi)
+    out = weighting_measures(Rt, R_m, Pi)
+    # H3 (brief Section 3, comparison signal): the same Amihud weighting applied to the
+    # differenced signal a_t = r~_t - r~_{t-1}, normalized by its own trailing energy, as
+    # fai_diff is in measures.daily_measures. Only fai_w_diff and f_bar_diff are kept.
+    A_d = signal(Rt, "diff")
+    R_m_d = normalizer(daily_energy(A_d), exclude=exclude)
+    w_d = weighting_measures(A_d, R_m_d, {"amihud": Pi["amihud"]})
+    return out.join(w_d[["fai_w", "f_bar"]].add_suffix("_diff"))
 
 
 def main() -> None:
